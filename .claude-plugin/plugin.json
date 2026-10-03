@@ -1,0 +1,61 @@
+{
+  "name": "shell-flow",
+  "version": "0.1.0",
+  "description": "Always-on status line and a pane for this session's Bash calls, background tasks and Codex/Pi/Devin/OpenCodeReview runs: elapsed time, output freshness, verdicts and errors.",
+  "author": {
+    "name": "apolenkov",
+    "url": "https://github.com/apolenkov"
+  },
+  "repository": "https://github.com/apolenkov/claude-mods",
+  "license": "MIT",
+  "keywords": [
+    "mod",
+    "function-hooks",
+    "bash",
+    "background",
+    "status-line",
+    "pane",
+    "codex",
+    "pi",
+    "devin"
+  ],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "columns": {
+      "type": "number",
+      "title": "Pane width",
+      "description": "Columns asked for the docked pane; a width you drag it to wins",
+      "default": 52
+    },
+    "openOnStart": {
+      "type": "boolean",
+      "title": "Open on start",
+      "description": "Open the pane when the session starts (the engine keeps an unasked pane hidden below 144 columns)",
+      "default": false
+    },
+    "maxCalls": {
+      "type": "number",
+      "title": "Calls kept",
+      "description": "How many calls the list keeps, oldest finished ones dropped first",
+      "default": 50
+    },
+    "quietMin": {
+      "type": "number",
+      "title": "Quiet after (min)",
+      "description": "Minutes without new output before a running call shows as quiet",
+      "default": 5
+    },
+    "hangMin": {
+      "type": "number",
+      "title": "Hung after (min)",
+      "description": "Minutes without new output before a running call shows as hung",
+      "default": 10
+    },
+    "statusLine": {
+      "type": "boolean",
+      "title": "Status line",
+      "description": "Show the always-on status line while anything runs or just failed",
+      "default": true
+    }
+  }
+}
