@@ -1,10 +1,11 @@
 import { expect, test } from "claude-code/testing";
 
 import {
+  agentLabelOf,
   exitCodeOf,
   labelOf,
   lastLines,
-  notificationOf,
+  noticesOf,
   outputPathOf,
   runnerOf,
   verdictOf,
@@ -70,23 +71,36 @@ test("last lines keep the tail and drop the trailing newline", () => {
   expect(lastLines("", 2)).toEqual([]);
 });
 
+test("notices are read from row texts, the rest ignored", () => {
+  expect(
+    noticesOf([
+      "hello",
+      "<task-notification><task-id>t3</task-id><status>completed</status>",
+    ]),
+  ).toEqual([{ taskId: "t3", status: "completed" }]);
+});
+
 test("a task notification gives its task, status and exit code", () => {
   const text =
     '<task-notification>\n<task-id>b3tme16m8</task-id>\n<status>failed</status>\n<summary>Background command "x" failed with exit code 144</summary>\n</task-notification>';
-  expect(notificationOf(text)).toEqual({
-    taskId: "b3tme16m8",
-    status: "failed",
-    exitCode: 144,
-  });
+  expect(noticesOf([text])).toEqual([
+    { taskId: "b3tme16m8", status: "failed", exitCode: 144 },
+  ]);
   expect(
-    notificationOf(
+    noticesOf([
       '<task-notification><task-id>t1</task-id><status>completed</status><summary>Background command "x" completed (exit code 0)</summary>',
-    ),
-  ).toEqual({ taskId: "t1", status: "completed", exitCode: 0 });
+    ]),
+  ).toEqual([{ taskId: "t1", status: "completed", exitCode: 0 }]);
   expect(
-    notificationOf(
+    noticesOf([
       "<task-notification><task-id>t2</task-id><status>killed</status>",
-    ),
-  ).toEqual({ taskId: "t2", status: "killed" });
-  expect(notificationOf("plain text")).toBeUndefined();
+    ]),
+  ).toEqual([{ taskId: "t2", status: "killed" }]);
+  expect(noticesOf(["plain text"])).toEqual([]);
+});
+
+test("a subagent is labelled by its type and description", () => {
+  const agents = [{ id: "a1", type: "codex-runner", description: "Review" }];
+  expect(agentLabelOf(agents, "a1")).toBe("codex-runner: Review");
+  expect(agentLabelOf(agents, "a9")).toBe("agent a9");
 });

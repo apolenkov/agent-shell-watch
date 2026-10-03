@@ -65,6 +65,22 @@ const RANK: Readonly<Record<ShellStatus, number>> = {
 export const isLive = (call: ShellCall): boolean => LIVE.has(call.status);
 
 /**
+ * Whether any call still runs.
+ * @param calls the list
+ * @returns true when one does
+ */
+export const hasLive = (calls: readonly ShellCall[]): boolean =>
+  calls.some((call) => LIVE.has(call.status));
+
+/**
+ * The calls that still run: what `clear` keeps.
+ * @param calls the list
+ * @returns the live calls
+ */
+export const liveOnly = (calls: readonly ShellCall[]): readonly ShellCall[] =>
+  calls.filter((call) => LIVE.has(call.status));
+
+/**
  * A call as the Bash input starts it.
  * @param input the tool call's input
  * @param now the clock's time
@@ -165,26 +181,36 @@ const NOTICED: Readonly<Record<string, ShellStatus>> = {
   failed: "failed",
 };
 
+const settledBy = (
+  call: ShellCall,
+  notice: TaskNotice,
+  now: number,
+): ShellCall => ({
+  ...ended(call, NOTICED[notice.status] ?? "stopped", now),
+  ...(notice.exitCode !== undefined && { exitCode: notice.exitCode }),
+  ...(call.runner !== undefined &&
+    call.outputPath !== undefined && { needsTail: true }),
+});
+
 /**
- * The calls after a background task's notification: its call settled.
+ * The calls after background tasks' notifications: each one's call settled,
+ * and a runner's output marked for one last read (its verdict).
  * @param calls the list
- * @param notice the notification
+ * @param notices the notifications
  * @param now the clock's time
  * @returns the list
  */
 export const noticed = (
   calls: readonly ShellCall[],
-  notice: TaskNotice,
+  notices: readonly TaskNotice[],
   now: number,
 ): readonly ShellCall[] =>
-  calls.map((call) =>
-    call.taskId === notice.taskId && isLive(call)
-      ? {
-          ...ended(call, NOTICED[notice.status] ?? "stopped", now),
-          ...(notice.exitCode !== undefined && { exitCode: notice.exitCode }),
-        }
-      : call,
-  );
+  calls.map((call) => {
+    const notice = notices.find((one) => one.taskId === call.taskId);
+    return notice !== undefined && isLive(call)
+      ? settledBy(call, notice, now)
+      : call;
+  });
 
 const quietOr = (silent: number, limits: Limits): ShellStatus =>
   silent > limits.quietMs ? "quiet" : "running";
@@ -230,7 +256,8 @@ export const polled = (
       };
 
 /**
- * A call after a read of its output file: the tail, and a runner's verdict.
+ * A call after a read of its output file: the tail, and a runner's verdict;
+ * a pending final read is done.
  * @param call the call
  * @param text the file's text
  * @returns the call with its tail
@@ -238,7 +265,12 @@ export const polled = (
 export const tailed = (call: ShellCall, text: string): ShellCall => {
   const tail = lastLines(text, TAIL_LINES);
   const verdict = call.runner === undefined ? undefined : verdictOf(tail);
-  return { ...call, tail, ...(verdict !== undefined && { verdict }) };
+  return {
+    ...call,
+    tail,
+    needsTail: false,
+    ...(verdict !== undefined && { verdict }),
+  };
 };
 
 /**

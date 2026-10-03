@@ -2,7 +2,9 @@ import { expect, test } from "claude-code/testing";
 
 import {
   classified,
+  hasLive,
   isLive,
+  liveOnly,
   noticed,
   polled,
   settled,
@@ -101,18 +103,32 @@ test("a notification settles the background call by task id", () => {
   ];
   const after = noticed(
     calls,
-    { taskId: "b1", status: "failed", exitCode: 3 },
+    [{ taskId: "b1", status: "failed", exitCode: 3 }],
     7,
   );
   expect(after[0]).toMatchObject({ status: "failed", exitCode: 3, endedAt: 7 });
   expect(after[1]?.status).toBe("running");
   expect(
-    noticed(calls, { taskId: "b1", status: "completed", exitCode: 0 }, 7)[0]
+    noticed(calls, [{ taskId: "b1", status: "completed", exitCode: 0 }], 7)[0]
       ?.status,
   ).toBe("done");
-  expect(noticed(calls, { taskId: "b1", status: "killed" }, 7)[0]?.status).toBe(
-    "stopped",
-  );
+  expect(
+    noticed(calls, [{ taskId: "b1", status: "killed" }], 7)[0]?.status,
+  ).toBe("stopped");
+  const runner = [
+    callOf({
+      background: true,
+      taskId: "b1",
+      runner: "codex",
+      outputPath: "/t/b1.output",
+    }),
+  ];
+  expect(
+    noticed(runner, [{ taskId: "b1", status: "completed" }], 7)[0]?.needsTail,
+  ).toBe(true);
+  expect(
+    tailed(callOf({ runner: "codex", needsTail: true }), "DONE 0\n").needsTail,
+  ).toBe(false);
 });
 
 test("liveness: running, then quiet after 5 min, hung after 10 min", () => {
@@ -173,4 +189,11 @@ test("urgency: hung, failed, quiet, running; runners first within a rank", () =>
   ]);
   expect(isLive(callOf({ status: "quiet" }))).toBe(true);
   expect(isLive(callOf({ status: "done" }))).toBe(false);
+  expect(hasLive([callOf({ status: "done" })])).toBe(false);
+  expect(liveOnly(calls).map((c) => c.id)).toEqual([
+    "run",
+    "quiet",
+    "hung",
+    "codex",
+  ]);
 });

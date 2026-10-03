@@ -25,6 +25,17 @@ export interface ShellCall {
   readonly tail: readonly string[];
   readonly stderr: readonly string[];
   readonly status: ShellStatus;
+  /** Set when a runner ended in the background: its verdict is still to read. */
+  readonly needsTail?: boolean;
+}
+
+/** The mod's `userConfig` values, checked and defaulted. */
+export interface ShellConfig {
+  readonly columns: number;
+  readonly openOnStart: boolean;
+  readonly maxCalls: number;
+  readonly limits: { readonly quietMs: number; readonly hangMs: number };
+  readonly statusLine: boolean;
 }
 
 /** Subagent ids mapped to what spawned them (`type: description`). */
@@ -33,6 +44,7 @@ export type ShellAgents = Readonly<Record<string, string>>;
 declare module "claude-code" {
   interface PluginState {
     "shell-flow": {
+      config: ShellConfig;
       calls: readonly ShellCall[];
       agents: ShellAgents;
       now: number;

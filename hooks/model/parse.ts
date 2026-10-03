@@ -114,12 +114,7 @@ export const lastLines = (text: string, count: number): readonly string[] =>
         .slice(-count)
         .map((line) => line.slice(0, LINE_MAX));
 
-/**
- * A background task's `<task-notification>`, as the session appends it.
- * @param text a text block of an appended row
- * @returns the task, its status and exit code, or undefined
- */
-export const notificationOf = (text: string): TaskNotice | undefined => {
+const notificationOf = (text: string): TaskNotice | undefined => {
   const taskId = TASK_ID.exec(text)?.[1];
   const code = TASK_EXIT.exec(text)?.[1];
   return taskId === undefined || !text.includes("<task-notification>")
@@ -129,4 +124,38 @@ export const notificationOf = (text: string): TaskNotice | undefined => {
         status: TASK_STATUS.exec(text)?.[1] ?? "completed",
         ...(code !== undefined && { exitCode: Number(code) }),
       };
+};
+
+/**
+ * The background tasks' `<task-notification>`s among a row's text blocks.
+ * @param texts the row's text blocks
+ * @returns each notice's task, status and exit code
+ */
+export const noticesOf = (texts: readonly string[]): readonly TaskNotice[] =>
+  texts.flatMap((text) => {
+    const notice = notificationOf(text);
+    return notice === undefined ? [] : [notice];
+  });
+
+/** What `$.agent.list()` says of one subagent. */
+export interface AgentEntry {
+  readonly id: string;
+  readonly type: string;
+  readonly description: string;
+}
+
+/**
+ * A subagent's label: `type: description`, else `agent <id>`.
+ * @param agents the session's subagents
+ * @param id the subagent's id
+ * @returns the label
+ */
+export const agentLabelOf = (
+  agents: readonly AgentEntry[],
+  id: string,
+): string => {
+  const found = agents.find((agent) => agent.id === id);
+  return found === undefined
+    ? `agent ${id}`
+    : `${found.type}: ${found.description}`;
 };
