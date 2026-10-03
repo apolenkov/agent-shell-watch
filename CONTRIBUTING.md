@@ -22,3 +22,7 @@ Mods need Claude Code 2.1.288+ with `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`. Try o
 - [Conventional Commits](https://www.conventionalcommits.org) with a scope:
   `shell-flow`, `council`, `repo`, `deps`, `ci`. Releases are cut by release-please.
 - After a Claude Code update: `npm run update-types`, then `npm run check`.
+
+`npm run lint` lints each mod's pure model in its own ESLint process: eslint-plugin-functional
+caches type immutability per type, not per rule level, so linting `hooks/` (lite) and
+`hooks/model/` (strict) in one process would make the result depend on file order.
