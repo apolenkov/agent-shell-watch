@@ -8,8 +8,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "repo:lint": "knip && ls-lint",
-    "validate": "for m in mods/*/; do [ -f \"$m.claude-plugin/plugin.json\" ] || continue; claude plugin validate --strict \"$m\" || exit 1; done",
-    "test": "for m in mods/*/; do [ -f \"$m.claude-plugin/plugin.json\" ] || continue; claude plugin test \"$m\" || exit 1; done",
+    "validate": "sh scripts/each-mod.sh validate --strict",
+    "test": "sh scripts/each-mod.sh test",
     "check": "npm run format:check && npm run typecheck && npm run lint && npm run repo:lint && npm run validate && npm test",
     "update-types": "sh scripts/update-types.sh",
     "prepare": "lefthook install"
