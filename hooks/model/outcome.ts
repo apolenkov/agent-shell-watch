@@ -31,9 +31,18 @@ const recordOutcome = (result: unknown, text: string): BashOutcome => {
   };
 };
 
+// Core reports an interrupted Bash call as an error with this text, not as
+// a record with `interrupted: true`.
+const ABORTED = /Command was aborted|Interrupted by user/u;
+
+const erroredOutcome = (text: string): BashOutcome =>
+  ABORTED.test(text)
+    ? { isError: false, text, interrupted: true }
+    : { isError: true, text };
+
 const answeredOutcome = (ran: Readonly<ToolCallResult>): BashOutcome =>
   ran.isError === true
-    ? { isError: true, text: ran.text ?? "" }
+    ? erroredOutcome(ran.text ?? "")
     : recordOutcome(ran.result, ran.text ?? "");
 
 /**

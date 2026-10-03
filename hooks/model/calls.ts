@@ -134,10 +134,10 @@ const finished = (
     TAIL_LINES,
   );
   const verdict = call.runner === undefined ? undefined : verdictOf(lines);
-  const exitCode = outcome.isError ? (exitCodeOf(outcome.text) ?? 1) : 0;
+  const exitCode = outcome.isError ? exitCodeOf(outcome.text) : 0;
   return {
     ...ended(call, outcome.isError ? "failed" : "done", now),
-    exitCode,
+    ...(exitCode !== undefined && { exitCode }),
     tail: outcome.isError ? call.tail : lines,
     stderr: outcome.isError
       ? lines
@@ -188,13 +188,13 @@ const settledBy = (
 ): ShellCall => ({
   ...ended(call, NOTICED[notice.status] ?? "stopped", now),
   ...(notice.exitCode !== undefined && { exitCode: notice.exitCode }),
-  ...(call.runner !== undefined &&
-    call.outputPath !== undefined && { needsTail: true }),
+  ...(call.outputPath !== undefined && { needsTail: true }),
 });
 
 /**
  * The calls after background tasks' notifications: each one's call settled,
- * and a runner's output marked for one last read (its verdict).
+ * and its output marked for one last read (a runner's verdict, the final
+ * lines of an expanded row).
  * @param calls the list
  * @param notices the notifications
  * @param now the clock's time

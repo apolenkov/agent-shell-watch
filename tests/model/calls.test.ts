@@ -197,3 +197,25 @@ test("urgency: hung, failed, quiet, running; runners first within a rank", () =>
     "codex",
   ]);
 });
+
+test("an error without an exit code fails with none invented", () => {
+  const call = settled(
+    callOf(),
+    { isError: true, text: "This command requires approval" },
+    9,
+  );
+  expect(call.status).toBe("failed");
+  expect(call.exitCode).toBeUndefined();
+});
+
+test("a runner's redirect is its watch file; any finished bg call is read once more", () => {
+  expect(
+    started({ tool_use_id: "u", command: "codex exec go > /t/c.log 2>&1" }, 0)
+      .watchPath,
+  ).toBe("/t/c.log");
+  const bg = [callOf({ background: true, taskId: "b1", outputPath: "/t/o" })];
+  expect(
+    noticed(bg, [{ taskId: "b1", status: "completed", exitCode: 0 }], 7)[0]
+      ?.needsTail,
+  ).toBe(true);
+});

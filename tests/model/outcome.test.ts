@@ -36,3 +36,17 @@ test("a deny, an error and an answered record become outcomes", () => {
     interrupted: false,
   });
 });
+
+test("an aborted Bash call is an interruption, not a failure", () => {
+  expect(
+    outcomeOf({
+      isError: true,
+      result: undefined,
+      text: "<error>Command was aborted before completion</error>",
+    }),
+  ).toEqual({
+    isError: false,
+    text: "<error>Command was aborted before completion</error>",
+    interrupted: true,
+  });
+});
