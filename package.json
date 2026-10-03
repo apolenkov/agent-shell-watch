@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.tools.json",
-    "lint": "eslint 'mods/*/hooks/model' --max-warnings 0 --no-warn-ignored && eslint . --ignore-pattern 'mods/*/hooks/model/**' --max-warnings 0 && eslint --no-inline-config --config eslint/suppression-guard.ts . --max-warnings 0",
+    "lint": "eslint 'mods/*/hooks/model' --max-warnings 0 --no-warn-ignored --no-error-on-unmatched-pattern && eslint . --ignore-pattern 'mods/*/hooks/model/**' --max-warnings 0 && eslint --no-inline-config --config eslint/suppression-guard.ts . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "repo:lint": "knip && ls-lint",
