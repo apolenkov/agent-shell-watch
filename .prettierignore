@@ -1,0 +1,4 @@
+node_modules/
+types/claude-code.d.ts
+mods/*/.claude-plugin/types/
+package-lock.json

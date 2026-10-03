@@ -1,0 +1,24 @@
+# Contributing
+
+## Setup
+
+```sh
+npm ci            # installs tooling and the git hooks (lefthook)
+npm run check     # format, typecheck, lint, repo lint, validate, tests
+```
+
+Mods need Claude Code 2.1.288+ with `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`. Try one live with
+`claude --plugin-dir mods/<name>`.
+
+## Rules of the house
+
+- TypeScript at its strictest (`tsconfig.json`), ESLint with no warnings and no
+  unexplained suppressions (a second pass with inline config off refuses them).
+- No mutation, no `let`, no loops, no classes. A mod's `hooks/model/` is pure and
+  held to `eslint-plugin-functional`'s strict preset.
+- Files ≤ 250 lines, functions ≤ 40, complexity ≤ 12.
+- Every behaviour has a test under `tests/`, named for the file it covers, run by
+  `claude plugin test`. No network in tests.
+- [Conventional Commits](https://www.conventionalcommits.org) with a scope:
+  `shell-flow`, `council`, `repo`, `deps`, `ci`. Releases are cut by release-please.
+- After a Claude Code update: `npm run update-types`, then `npm run check`.
