@@ -10,10 +10,10 @@ concurrency:
   cancel-in-progress: true
 jobs:
   check:
-    # Trusted runs (push to main, PRs from this repository's own branches) use the
-    # owner's ephemeral self-hosted runner; PRs from forks never touch it and run
-    # on GitHub's hosted runner instead.
-    runs-on: ${{ (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","claude-mods"]') || 'ubuntu-latest' }}
+    # Trusted runs (push to main, PRs from this repository's own branches by a
+    # human) use the owner's ephemeral self-hosted runner. Fork PRs and dependency
+    # bots (their PRs carry third-party package code) run on GitHub's hosted runner.
+    runs-on: ${{ (github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'renovate[bot]')) && fromJSON('["self-hosted","claude-mods"]') || 'ubuntu-latest' }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -24,8 +24,10 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
-      - run: npm install -g @anthropic-ai/claude-code@2.1.288
+      # No install scripts from the dependency tree; only Claude Code's own
+      # postinstall, which fetches its pinned native binary.
+      - run: npm ci --ignore-scripts
+      - run: node node_modules/@anthropic-ai/claude-code/install.cjs
       - run: npm run check
         env:
           CLAUDE_CODE_ENABLE_FUNCTION_HOOKS: "1"

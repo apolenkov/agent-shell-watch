@@ -135,3 +135,42 @@ Adapters on recorded outputs (fixtures), detection/limits/single-flight with moc
 and `fs.read`, summary with mocked `model.complete` (valid JSON, broken JSON), Jev with a mocked
 `http.fetch`, auto-review scheduling with `mock.clock` (hash unchanged → nothing; cooldown), pane
 render on terminal and desktop. No network.
+
+## Revisions after spec review (Fable, 2026-10-04) — these override the sections above
+
+Files: hooks module `hooks/register.tsx`; pure model `hooks/model/*.ts` (functional strict);
+effects `hooks/effects/*.ts`; views `hooks/view/*.tsx`; each mod has `version.txt` for release-please.
+
+shell-flow
+
+- Tail via `$.process.run(['tail','-n','40',path])` for visible running rows only while the pane
+  is open; `$.fs.read` rejects files > 4 MiB. Tails are not kept in `$.state` (4 MiB JSON cap).
+- `$.fs.stat` rejects a missing path: a missing output/watch file means `lastOutputAt = startedAt`.
+- Background path regex accepts both phrasings ("running in background with ID" and "was moved to
+  the background"); the path ends before a trailing period.
+- Subagent labels from `$.agent.list()` (`AgentSpawnInput` carries no agentId).
+- Runner = first command token after env assignments and `cd … &&`; `echo pi` does not match.
+- `maxCalls` default 50. A (re)load restarts the poller when state holds running calls.
+- Runner rows are the primary scenario (owner: ordinary subagents are already shown by Claude Code).
+
+council
+
+- `ocr` is installed on the owner's machine (v1.12.11); all four adapters are live-checkable.
+- argv: `codex exec review --uncommitted --ephemeral -o <file>`; `pi -p --mode json --no-session
+--no-tools <prompt>`; `devin -p --permission-mode auto --respect-workspace-trust false <prompt>`
+  (explicit read-only mode: an env default may be `dangerous`); `ocr review --format json --audience agent`.
+- `$.process.spawn` streams member output; no `process.run` fallback.
+- `autoReview` defaults to `off` (paid CLIs); the owner enables `notify` in settings. Council-level
+  single-flight, empty diff skipped, a new `prompt.submit` cancels a scheduled auto-run.
+- Untracked files: `git ls-files --others --exclude-standard`, binaries and files > 64 KB skipped,
+  secret-like names (`.env*`, `*.pem`, `*.key`, `*secret*`, `*credential*`) never sent.
+- Detection by `<bin> --version` signature, not bare `command -v`. Limit files hold epoch seconds.
+- Jev limits (≤ 9 questions, ≤ 14k chars) are the owner's rule (doc-016), not API limits; key sent
+  as an `Authorization: Bearer` header through `$.http.fetch`.
+- Tests: `mock` covers clock/store/env only; other nouns are answered by `on(...)` hooks.
+
+CI
+
+- `npm ci --ignore-scripts`, then only Claude Code's own postinstall; Claude Code pinned as a
+  devDependency. Renovate PRs run on the hosted runner. Fork PRs need maintainer approval
+  (repository Actions setting, applied at publication).

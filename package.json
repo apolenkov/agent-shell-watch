@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc6 -p tsconfig.json && tsc6 -p tsconfig.tools.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.tools.json",
     "lint": "eslint . --max-warnings 0 && eslint --no-inline-config --config eslint/suppression-guard.ts . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -15,6 +15,7 @@
     "prepare": "lefthook install"
   },
   "devDependencies": {
+    "@anthropic-ai/claude-code": "2.1.288",
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-conventional": "21.2.3",
     "@commitlint/types": "21.2.3",
@@ -34,7 +35,7 @@
     "knip": "6.39.0",
     "lefthook": "2.1.16",
     "prettier": "3.9.9",
-    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "typescript": "6.0.3",
     "typescript-eslint": "8.71.0"
   },
   "engines": {
