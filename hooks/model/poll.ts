@@ -25,11 +25,22 @@ export const watchedOf = (calls: readonly ShellCall[]): readonly ShellCall[] =>
   );
 
 /**
+ * Which file's tail to read: live progress from the watch file, else the
+ * Bash output; once finished, the output (where the guard's verdict is).
+ * @param call the call
+ * @returns the path, or undefined when there is none
+ */
+export const tailPathOf = (call: ShellCall): string | undefined =>
+  call.needsTail === true
+    ? (call.outputPath ?? call.watchPath)
+    : (call.watchPath ?? call.outputPath);
+
+/**
  * Whether to read the call's output tail now.
  * @param call the call
  * @param need what the stat saw and whether the tail is wanted
  * @returns true when the tail should be read
  */
 export const isTailDue = (call: ShellCall, need: TailNeed): boolean =>
-  call.outputPath !== undefined &&
+  tailPathOf(call) !== undefined &&
   (call.needsTail === true || (need.isNew && need.isWanted));

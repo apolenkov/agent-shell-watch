@@ -11,7 +11,7 @@ import type { ShellCall } from "../types";
 import { classified, hasLive, polled, tailed } from "./model/calls.ts";
 import { type Config, configOf } from "./model/config.ts";
 import { statusLineOf } from "./model/format.ts";
-import { isTailDue, watchedOf } from "./model/poll.ts";
+import { isTailDue, tailPathOf, watchedOf } from "./model/poll.ts";
 import { onRender } from "./pane.tsx";
 import { onClose, onCommand, PANE } from "./slash-command.ts";
 import { onAppend, onToolCall } from "./track.ts";
@@ -76,7 +76,7 @@ const pollCall = async (
   const stat = await statOf($, call.watchPath ?? call.outputPath ?? "");
   const isNew = stat !== undefined && stat.size !== call.outputBytes;
   const text = isTailDue(call, { isNew, isWanted: isTailWanted })
-    ? await tailOf($, call.outputPath ?? "")
+    ? await tailOf($, tailPathOf(call) ?? "")
     : undefined;
   const now = await $.clock.now();
   await update($, callsAtom, (calls) =>
