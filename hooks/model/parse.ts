@@ -10,6 +10,8 @@ const OUTPUT_PATH = /Output is being written to: (\S+)/u;
 const RUNNERS: ReadonlySet<string> = new Set(["codex", "pi", "devin", "ocr"]);
 const SEGMENT = /[;&|()]|\s--\s/u;
 const ASSIGNMENT = /^\w+=/u;
+const SHELL_C = /(?:^|\s)(?:ba|z)?sh\s+-l?c\s+['"]?/gu;
+const REDIRECT = /(?:^|\s)1?>>?\s*(?:'([^']+)'|"([^"]+)"|([^\s;&|<>'"]+))/u;
 const LINE_MAX = 200;
 const WATCH_FILE = /--watch-file(?:=|\s+)(?:'([^']*)'|"([^"]*)"|(\S+))/u;
 const VERDICT = /^(?:DONE \d+|RATE_LIMIT \d+|STALLED \S+|BUSY \d+ \S+)$/u;
@@ -49,13 +51,14 @@ export const outputPathOf = (text: string): string | undefined =>
 
 /**
  * The external agent CLI a command segment runs as its executable: the
- * first word past `NAME=value` assignments, after `;`, `&&`, `|` or a
- * guard's ` -- `.
+ * first word past `NAME=value` assignments, after `;`, `&&`, `|`, a guard's
+ * ` -- `, or inside a `bash -c '…'` / `sh -c "…"` wrapper.
  * @param command the Bash command
  * @returns the runner, or undefined
  */
 export const runnerOf = (command: string): ShellRunner | undefined =>
   command
+    .replaceAll(SHELL_C, " ; ")
     .split(SEGMENT)
     .map(
       (part) =>
@@ -68,14 +71,25 @@ export const runnerOf = (command: string): ShellRunner | undefined =>
     )
     .find((name) => RUNNERS.has(name)) as ShellRunner | undefined;
 
+const redirectOf = (command: string): string | undefined => {
+  const found = REDIRECT.exec(command);
+  const target = found?.[1] ?? found?.[2] ?? found?.[3];
+  return target?.startsWith("/") === true ? target : undefined;
+};
+
 /**
- * The runner guard's `--watch-file` path, quoted or not.
- * @param command the Bash command
+ * The file whose growth is a runner's output: the guard's `--watch-file`, or
+ * a runner's absolute stdout redirect (`> /path`, what the guard would watch).
+ * @param command the Bash command, as the model wrote it or as wrapped
  * @returns the path, or undefined
  */
 export const watchPathOf = (command: string): string | undefined => {
   const found = WATCH_FILE.exec(command);
-  return found?.[1] ?? found?.[2] ?? found?.[3];
+  const flagged = found?.[1] ?? found?.[2] ?? found?.[3];
+  return (
+    flagged ??
+    (runnerOf(command) === undefined ? undefined : redirectOf(command))
+  );
 };
 
 /**

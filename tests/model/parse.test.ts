@@ -50,6 +50,10 @@ test("watch file is read from either spelling", () => {
   expect(watchPathOf("w --watch-file /t/a.log -- codex exec")).toBe("/t/a.log");
   expect(watchPathOf("w --watch-file='/t/b c.log' -- pi")).toBe("/t/b c.log");
   expect(watchPathOf("pi -p x")).toBeUndefined();
+  expect(watchPathOf("codex exec go > /t/c.log 2>&1")).toBe("/t/c.log");
+  expect(watchPathOf("pi -p x >> '/t/p q.log'")).toBe("/t/p q.log");
+  expect(watchPathOf("pi -p x > rel.log")).toBeUndefined();
+  expect(watchPathOf("ls > /t/list.txt")).toBeUndefined();
 });
 
 test("verdict is the last non-empty line when it is a guard line", () => {
@@ -103,4 +107,16 @@ test("a subagent is labelled by its type and description", () => {
   const agents = [{ id: "a1", type: "codex-runner", description: "Review" }];
   expect(agentLabelOf(agents, "a1")).toBe("codex-runner: Review");
   expect(agentLabelOf(agents, "a9")).toBe("agent a9");
+});
+
+test("a runner is found inside a shell wrapper, the guard's included", () => {
+  expect(runnerOf("node w.ts -- bash -c 'codex exec review'")).toBe("codex");
+  expect(
+    runnerOf(
+      String.raw`node '/w/watchdog.ts' --silence 600 --max-seconds 105 -- bash -c 'cd /r && pi -p '\''fix it'\'' > /t/p.log'`,
+    ),
+  ).toBe("pi");
+  expect(runnerOf('sh -c "devin -p go"')).toBe("devin");
+  expect(runnerOf("bash -lc 'ocr review'")).toBe("ocr");
+  expect(runnerOf("bash -c 'echo pi'")).toBeUndefined();
 });
