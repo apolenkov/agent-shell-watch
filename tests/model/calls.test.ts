@@ -142,6 +142,7 @@ test("a tail read keeps the last 40 lines and the runner verdict", () => {
   expect(call.tail).toHaveLength(40);
   expect(call.tail.at(-1)).toBe("DONE 0");
   expect(call.verdict).toBe("DONE 0");
+  expect(tailed(callOf(), "x".repeat(500)).tail[0]).toHaveLength(200);
 });
 
 test("trimming drops the oldest finished calls first", () => {

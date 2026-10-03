@@ -22,6 +22,11 @@ test("label comes from the description, else the command's first 60 chars", () =
 
 test("background output path is parsed from the result text", () => {
   expect(outputPathOf(BG_TEXT)).toBe("/work/s1/tasks/b3tme16m8.output");
+  expect(
+    outputPathOf(
+      "Command was moved to the background (ID: b2). Output is being written to: /work/s1/tasks/b2.output.",
+    ),
+  ).toBe("/work/s1/tasks/b2.output");
   expect(outputPathOf("hello")).toBeUndefined();
 });
 
@@ -32,7 +37,11 @@ test("runner is the executable, not a word in an argument", () => {
   );
   expect(runnerOf("cd /w && /usr/local/bin/devin -p go")).toBe("devin");
   expect(runnerOf("ocr review --format json")).toBe("ocr");
+  expect(runnerOf("FOO=1 BAR=x codex exec go")).toBe("codex");
+  expect(runnerOf("cd /w/repo && pi -p fix")).toBe("pi");
   expect(runnerOf("echo pi")).toBeUndefined();
+  expect(runnerOf("grep pi notes.txt")).toBeUndefined();
+  expect(runnerOf("git commit -m 'codex'")).toBeUndefined();
   expect(runnerOf("git log")).toBeUndefined();
 });
 

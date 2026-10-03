@@ -9,6 +9,8 @@ const LABEL_MAX = 60;
 const OUTPUT_PATH = /Output is being written to: (\S+)/u;
 const RUNNERS: ReadonlySet<string> = new Set(["codex", "pi", "devin", "ocr"]);
 const SEGMENT = /[;&|()]|\s--\s/u;
+const ASSIGNMENT = /^\w+=/u;
+const LINE_MAX = 200;
 const WATCH_FILE = /--watch-file(?:=|\s+)(?:'([^']*)'|"([^"]*)"|(\S+))/u;
 const VERDICT = /^(?:DONE \d+|RATE_LIMIT \d+|STALLED \S+|BUSY \d+ \S+)$/u;
 const EXIT_CODE = /^Exit code (\d+)/u;
@@ -46,14 +48,24 @@ export const outputPathOf = (text: string): string | undefined =>
   OUTPUT_PATH.exec(text)?.[1]?.replace(/\.$/u, "");
 
 /**
- * The external agent CLI the command runs as an executable.
+ * The external agent CLI a command segment runs as its executable: the
+ * first word past `NAME=value` assignments, after `;`, `&&`, `|` or a
+ * guard's ` -- `.
  * @param command the Bash command
  * @returns the runner, or undefined
  */
 export const runnerOf = (command: string): ShellRunner | undefined =>
   command
     .split(SEGMENT)
-    .map((part) => part.trim().split(/\s+/u, 1)[0]?.split("/").at(-1) ?? "")
+    .map(
+      (part) =>
+        part
+          .trim()
+          .split(/\s+/u)
+          .find((word) => !ASSIGNMENT.test(word))
+          ?.split("/")
+          .at(-1) ?? "",
+    )
     .find((name) => RUNNERS.has(name)) as ShellRunner | undefined;
 
 /**
@@ -87,13 +99,20 @@ export const exitCodeOf = (text: string): number | undefined => {
 };
 
 /**
- * The last `count` lines of a text, a trailing newline ignored.
+ * The last `count` lines of a text, each cut to 200 chars, a trailing
+ * newline ignored.
  * @param text the text
  * @param count how many lines to keep
  * @returns the lines, oldest first
  */
 export const lastLines = (text: string, count: number): readonly string[] =>
-  text === "" ? [] : text.replace(/\n$/u, "").split("\n").slice(-count);
+  text === ""
+    ? []
+    : text
+        .replace(/\n$/u, "")
+        .split("\n")
+        .slice(-count)
+        .map((line) => line.slice(0, LINE_MAX));
 
 /**
  * A background task's `<task-notification>`, as the session appends it.
