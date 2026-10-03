@@ -4,9 +4,11 @@ pre-commit:
     - name: format
       glob: "*.{ts,tsx,json,md,yml,yaml}"
       run: npx prettier --check {staged_files}
+    # The whole-repo lint: it runs the model in its own ESLint process (see
+    # CONTRIBUTING.md), which a single run over the staged files cannot.
     - name: lint
       glob: "*.{ts,tsx}"
-      run: npx eslint --max-warnings 0 --no-warn-ignored {staged_files}
+      run: npm run -s lint
     - name: typecheck
       glob: "*.{ts,tsx}"
       run: npm run -s typecheck
