@@ -50,9 +50,27 @@ const nameAgent = async (
   }
 };
 
+// A TaskStop the model makes ends its task without a <task-notification>.
+const stopTask = async (
+  $: Readonly<EngineInterface>,
+  e: Readonly<Extract<ToolCallInput, { tool: "TaskStop" }>>,
+  next: Next<"tool.call">,
+): Promise<ToolCallResult> => {
+  const stopped = await next(e);
+  const taskId = e.task_id ?? e.shell_id;
+  const isStopped = stopped.deny === undefined && stopped.isError !== true;
+  if (isStopped && taskId !== undefined) {
+    const now = await $.clock.now();
+    await update($, callsAtom, (calls) =>
+      noticed(calls, [{ taskId, status: "stopped" }], now),
+    );
+  }
+  return stopped;
+};
+
 /**
- * `tool.call`: a Bash call is recorded, run, and its result recorded; every
- * call's result is passed on unchanged.
+ * `tool.call`: a Bash call is recorded, run, and its result recorded; a
+ * successful TaskStop settles its call; every result is passed on unchanged.
  * @param $ the engine
  * @param e the call
  * @param next the rest of the chain
@@ -63,6 +81,9 @@ export const onToolCall = async (
   e: Readonly<ToolCallInput>,
   next: Next<"tool.call">,
 ): Promise<ToolCallResult> => {
+  if (e.tool === "TaskStop") {
+    return stopTask($, e, next);
+  }
   if (e.tool !== "Bash") {
     return next(e);
   }

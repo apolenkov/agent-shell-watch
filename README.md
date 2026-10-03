@@ -75,9 +75,14 @@ Requirements: Claude Code 2.1.288 or later with function hooks enabled
 | `ui.render` (Pane)        | Draws the pane; the selected row's tail is read once when it is selected                     |
 | `ui.close`, `command.run` | Opens and closes the pane                                                                    |
 
-A runner is a command whose executable (past `NAME=value` and `cd … &&`, or
-after a guard's `--`) is `codex`, `pi`, `devin` or `ocr`; `--watch-file
-<path>` names the file whose growth counts as output. Every hook passes its
+A runner is a command whose executable (past `NAME=value` and `cd … &&`,
+after a guard's `--`, or inside `bash -c '…'` / `sh -c "…"`) is `codex`,
+`pi`, `devin` or `ocr`. Its live output is the guard's `--watch-file`, or its
+own absolute stdout redirect (`> /path/run.log`); the guard's verdict is read
+from the Bash output once the run ends. shell-flow sees the command as the
+model wrote it, before a `PreToolUse` settings hook wraps it, and recognises
+both forms. A `TaskStop` (the model's or the pane's) settles its call as
+stopped; an interrupted call is stopped, not failed. Every hook passes its
 event on unchanged.
 
 ## Privacy

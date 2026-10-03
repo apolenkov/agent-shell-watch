@@ -171,3 +171,53 @@ test("after a reload the poller resumes running calls", async ($, on) => {
   await clock.advance(6 * MIN);
   expect(seen.statuses.at(-1)).toMatch(/^shell: ⚠ quiet 6m Wait/u);
 });
+
+test("a foreground runner's live line comes from its watch file", async ($, on) => {
+  const clock = mock.clock(on);
+  const seen = world(on);
+  seen.files.set("/t/w.log", { size: 5, mtimeMs: 1000 });
+  seen.tails.set("/t/w.log", "thinking\nediting src/b.ts\n");
+  on("tool.call", { tool: "Bash" }, async () => {
+    await clock.advance(3000);
+    return {
+      result: { stdout: "DONE 0\n", stderr: "", interrupted: false },
+      text: "DONE 0",
+    };
+  });
+  await $.session.start(START);
+  await $.tool.call({
+    tool: "Bash",
+    command: "codex exec review > /t/w.log 2>&1",
+    description: "Review",
+  });
+  expect(seen.statuses).toContain(
+    "shell: ◐ codex · Review 0:02 · output 1s ago · › editing src/b.ts",
+  );
+});
+
+test("a TaskStop the model makes settles its background call", async ($, on) => {
+  const clock = mock.clock(on);
+  const seen = world(on);
+  on("tool.call", { tool: "Bash" }, () => BG_RESULT);
+  await $.session.start(START);
+  await $.tool.call({ tool: "Bash", command: "sleep 99", description: "Wait" });
+  await $.tool.call({ tool: "TaskStop", task_id: "b1" });
+  await clock.advance(1000);
+  expect(seen.stops).toEqual(["b1"]);
+  expect(seen.statuses.at(-1)).toBeUndefined();
+});
+
+test("an interrupted call is stopped, not failed", async ($, on) => {
+  const clock = mock.clock(on);
+  const seen = world(on);
+  on("tool.call", { tool: "Bash" }, () => ({
+    isError: true,
+    result: undefined,
+    text: "<error>Command was aborted before completion</error>",
+  }));
+  await $.session.start(START);
+  await $.tool.call({ tool: "Bash", command: "sleep 9", description: "Wait" });
+  await clock.advance(1000);
+  expect(seen.statuses.at(-1)).toBeUndefined();
+  expect(await textOf(await paneOf($, "terminal"))).toContain("○");
+});
