@@ -27,6 +27,10 @@ const configAtom = atom(
 );
 const nowAtom = atom({ plugin: "shell-flow", key: "now" } as const, 0);
 const openAtom = atom({ plugin: "shell-flow", key: "isOpen" } as const, false);
+const backgroundOnlyAtom = atom(
+  { plugin: "shell-flow", key: "isBackgroundOnly" } as const,
+  false,
+);
 const selectedAtom = atom(
   { plugin: "shell-flow", key: "selected" } as const,
   "",
@@ -110,6 +114,20 @@ const poll = async ($: Engine, config: Config): Promise<void> => {
   );
 };
 
+// The person's last choice outlives the session in $.store; openOnStart is
+// the default until they have made one.
+const restore = async ($: Engine, config: Config): Promise<void> => {
+  const stored = await $.store.get("paneOpen");
+  const isOpen = typeof stored === "boolean" ? stored : config.openOnStart;
+  const isBackgroundOnly = (await $.store.get("backgroundOnly")) === true;
+  await update($, backgroundOnlyAtom, () => isBackgroundOnly);
+  if (!isOpen) {
+    return;
+  }
+  await $.ui.open({ id: PANE, title: "shell", columns: config.columns });
+  await update($, openAtom, () => true);
+};
+
 /**
  * Wires shell-flow's hooks.
  * @param on the registrar
@@ -135,10 +153,7 @@ export const register: Register = (on, options) => {
     $.clock.every(POLL_MS, () => {
       void poll($, config);
     });
-    if (config.openOnStart) {
-      await $.ui.open({ id: PANE, title: "shell", columns: config.columns });
-      await update($, openAtom, () => true);
-    }
+    await restore($, config);
     return started;
   });
   on("tool.call", onToolCall);

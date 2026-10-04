@@ -71,6 +71,17 @@ const stop = async ($: Engine, taskId: string): Promise<void> => {
   );
 };
 
+const toggle = async ($: Engine): Promise<void> => {
+  const isOn = await update($, backgroundOnlyAtom, (was) => !was);
+  await $.store.set("backgroundOnly", isOn);
+};
+
+const close = async ($: Engine): Promise<void> => {
+  await $.store.set("paneOpen", false);
+  await update($, openAtom, () => false);
+  await $.ui.close({ id: PANE });
+};
+
 /**
  * `ui.render` of the `shell-flow` pane.
  * @param $ the engine
@@ -96,14 +107,13 @@ export const onRender = async (
     },
     {
       toggle: () => {
-        void update($, backgroundOnlyAtom, (isOn) => !isOn);
+        void toggle($);
       },
       clear: () => {
         void update($, callsAtom, liveOnly);
       },
       close: () => {
-        void $.ui.close({ id: PANE });
-        void update($, openAtom, () => false);
+        void close($);
       },
       select: (id) => {
         void select($, id);

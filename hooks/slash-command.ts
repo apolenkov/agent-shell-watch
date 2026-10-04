@@ -46,8 +46,9 @@ export const onCommand = async (
 ): Promise<CommandRunResult> => {
   const argument = e.args.trim().toLowerCase();
   if (argument === "stop" || argument === "close") {
-    await $.ui.close({ id: PANE });
+    await $.store.set("paneOpen", false);
     await update($, openAtom, () => false);
+    await $.ui.close({ id: PANE });
     return { text: "shell-flow closed" };
   }
   if (argument === "clear") {
@@ -66,6 +67,7 @@ export const onCommand = async (
     focus: true,
   });
   await update($, openAtom, () => true);
+  await $.store.set("paneOpen", true);
   return {
     text: opened.isPlaced
       ? "shell-flow opened · /shell-flow stop closes"
@@ -85,8 +87,10 @@ export const onClose = async (
   e: Readonly<PaneCloseInput>,
   next: Next<"ui.close">,
 ): Promise<OpEventResult<"ui.close">> => {
-  if (e.id === PANE) {
+  // An unload (a reload, the session's end) is no choice of the person's.
+  if (e.id === PANE && e.origin.kind !== "unload") {
     await update($, openAtom, () => false);
+    await $.store.set("paneOpen", false);
   }
   return next(e);
 };

@@ -1,4 +1,5 @@
 import type { AgentInfo, On } from "claude-code";
+import { mock } from "claude-code/testing";
 
 /** What the mocked world beneath the plugin saw and holds. */
 export interface World {
@@ -11,12 +12,19 @@ export interface World {
 
 /**
  * Answers every engine call shell-flow makes besides Bash and the clock:
- * session start, commands, status line, panes, agents, stat, tail, TaskStop.
+ * session start, the store, commands, status line, panes, agents, stat,
+ * tail, TaskStop.
  * @param on the test's registrar
+ * @param stored what `$.store` holds at the start
  * @param agents what `$.agent.list()` answers
  * @returns the world, to assert on and to feed files into
  */
-export const world = (on: On, agents: AgentInfo[] = []): World => {
+export const world = (
+  on: On,
+  stored: Readonly<Record<string, unknown>> = {},
+  agents: AgentInfo[] = [],
+): World => {
+  mock.store(on, stored);
   const seen: World = {
     statuses: [],
     files: new Map(),
