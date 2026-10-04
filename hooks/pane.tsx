@@ -6,7 +6,7 @@ import type { EngineInterface, RenderElement, RenderInput } from "claude-code";
 import { atom, read, update } from "claude-code";
 
 import type { ShellAgents, ShellCall } from "../types";
-import { liveOnly, noticed, tailed } from "./model/calls.ts";
+import { finishedIds, liveOnly, noticed, tailed } from "./model/calls.ts";
 import { paneTree } from "./view/pane.tsx";
 
 const NO_CALLS: readonly ShellCall[] = [];
@@ -15,6 +15,13 @@ const callsAtom = atom(
   { plugin: "shell-flow", key: "calls" } as const,
   NO_CALLS,
 );
+const NO_IDS: readonly string[] = [];
+// The ids `clear` forgot, so a backfill does not bring them back.
+const clearedAtom = atom(
+  { plugin: "shell-flow", key: "cleared" } as const,
+  NO_IDS,
+);
+
 const agentsAtom = atom(
   { plugin: "shell-flow", key: "agents" } as const,
   NO_AGENTS,
@@ -30,6 +37,17 @@ const PANE = "shell-flow";
 const TAIL_LINES = "40";
 
 type Engine = Readonly<EngineInterface>;
+
+// ponytail: the cleared ids list is capped; a transcript keeps 4096 entries.
+const CLEARED_MAX = 4096;
+
+const clearCalls = async ($: Readonly<EngineInterface>): Promise<void> => {
+  const calls = await read($, callsAtom);
+  await update($, clearedAtom, (ids) =>
+    [...ids, ...finishedIds(calls)].slice(-CLEARED_MAX),
+  );
+  await update($, callsAtom, liveOnly);
+};
 
 const tailOf = async ($: Engine, path: string): Promise<string | undefined> => {
   try {
@@ -99,7 +117,7 @@ export const onRender = async (
     },
     {
       clear: () => {
-        void update($, callsAtom, liveOnly);
+        void clearCalls($);
       },
       close: () => {
         void close($);

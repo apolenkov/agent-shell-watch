@@ -95,3 +95,15 @@ test("opening the pane picks up what the transcript gained", async ($, on) => {
   await $.command.run(RUN);
   expect(await textOf(await paneOf($, "terminal"))).toContain("Wait");
 });
+
+test("cleared calls stay cleared when the pane opens again", async ($, on) => {
+  mock.clock(on);
+  const seen = world(on);
+  seen.transcripts.set("", MAIN);
+  await $.session.start(START);
+  await $.command.run({ ...RUN, args: "clear" });
+  await $.command.run(RUN);
+  const text = await textOf(await paneOf($, "terminal"));
+  expect(text).not.toContain("E2E");
+  expect(text).toContain("Wait");
+});

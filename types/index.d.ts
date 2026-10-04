@@ -53,6 +53,7 @@ declare module "claude-code" {
       now: number;
       isOpen: boolean;
       selected: string;
+      cleared: readonly string[];
     };
   }
 }

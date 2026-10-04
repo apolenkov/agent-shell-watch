@@ -104,3 +104,16 @@ test("details keep the newest lines that fit, the rest counted on top", () => {
   expect(tailFit(lines, 3)).toEqual(["… 3 earlier lines", "step 3", "step 4"]);
   expect(tailFit(lines, 0)).toEqual([]);
 });
+
+test("equal start times: the later in the list is the newer", () => {
+  const calls = [
+    callOf({ id: "first", status: "done", startedAt: 5 }),
+    callOf({ id: "second", status: "done", startedAt: 5 }),
+    callOf({ id: "third", status: "done", startedAt: 5 }),
+  ];
+  expect(paneOrder(calls).map((call) => call.id)).toEqual([
+    "third",
+    "second",
+    "first",
+  ]);
+});

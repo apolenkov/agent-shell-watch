@@ -24,6 +24,13 @@ const callsAtom = atom(
   { plugin: "shell-flow", key: "calls" } as const,
   NO_CALLS,
 );
+const NO_IDS: readonly string[] = [];
+// The ids `clear` forgot, so a backfill does not bring them back.
+const clearedAtom = atom(
+  { plugin: "shell-flow", key: "cleared" } as const,
+  NO_IDS,
+);
+
 const configAtom = atom(
   { plugin: "shell-flow", key: "config" } as const,
   configOf({}),
@@ -162,8 +169,12 @@ const backfill = async ($: Engine, config: Config): Promise<void> => {
     ),
     ...known,
   }));
+  const cleared = await read($, clearedAtom);
   await update($, callsAtom, (calls) =>
-    merged(calls, [...main, ...subs.flat()], config.maxCalls),
+    merged(calls, [...main, ...subs.flat()], {
+      max: config.maxCalls,
+      cleared,
+    }),
   );
 };
 

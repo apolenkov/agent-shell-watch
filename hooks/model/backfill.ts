@@ -5,7 +5,7 @@
 import type { ShellCall } from "../../types";
 import { noticed, settled, started, trimmed } from "./calls.ts";
 import { outcomeOf } from "./outcome.ts";
-import { noticesOf } from "./parse.ts";
+import { noticesOf, type TaskNotice } from "./parse.ts";
 
 /** One tool use as `$.session.messages()` reports it. */
 export interface ToolUseRow {
@@ -26,6 +26,17 @@ export interface MessageRow {
 
 const stringOf = (value: unknown): string | undefined =>
   typeof value === "string" ? value : undefined;
+
+// A TaskStop the model made ends its task without a <task-notification>.
+const stopsOf = (uses: readonly ToolUseRow[]): readonly TaskNotice[] =>
+  uses
+    .filter((use) => use.tool === "TaskStop" && use.isError !== true)
+    .map(
+      (use) =>
+        stringOf(use.input["task_id"]) ?? stringOf(use.input["shell_id"]),
+    )
+    .filter((taskId) => taskId !== undefined)
+    .map((taskId) => ({ taskId, status: "stopped" }));
 
 const isAnswered = (use: ToolUseRow): boolean =>
   use.result !== undefined || use.text !== undefined;
@@ -65,27 +76,46 @@ export const backfilled = (
   agentId: string | undefined,
   now: number,
 ): readonly ShellCall[] => {
-  const calls = rows
-    .flatMap((row) => row.toolUses)
+  const uses = rows.flatMap((row) => row.toolUses);
+  const calls = uses
     .filter((use) => use.tool === "Bash" && isAnswered(use))
     .map((use) => callOf(use, agentId, now));
-  return noticed(calls, noticesOf(rows.map((row) => row.text)), now);
+  return noticed(
+    calls,
+    [...noticesOf(rows.map((row) => row.text)), ...stopsOf(uses)],
+    now,
+  );
 };
 
+/** How many calls to keep, and which ids never to bring back. */
+export interface Keep {
+  readonly max: number;
+  readonly cleared: readonly string[];
+}
+
 /**
- * The state's calls with the rebuilt ones it lacks added before them, cut to
- * `max` (the oldest finished dropped first). The state's own copy wins.
+ * The state's calls and the rebuilt ones it lacks, in transcript order (the
+ * state's own copy wins, calls only the state knows follow), without the
+ * ones the person cleared, cut to `max` (the oldest finished dropped first).
  * @param known the calls in state
- * @param rebuilt the calls rebuilt from the transcript
- * @param max how many to keep
+ * @param rebuilt the calls rebuilt from the transcript, oldest first
+ * @param keep how many to keep (`max`) and the ids the person cleared
  * @returns the list
  */
 export const merged = (
   known: readonly ShellCall[],
   rebuilt: readonly ShellCall[],
-  max: number,
+  keep: Keep,
 ): readonly ShellCall[] => {
-  const ids = new Set(known.map((call) => call.id));
-  const added = rebuilt.filter((call) => !ids.has(call.id));
-  return trimmed([...added, ...known], max);
+  const { max, cleared } = keep;
+  const gone = new Set(cleared);
+  const byId = new Map(known.map((call) => [call.id, call]));
+  const rebuiltIds = new Set(rebuilt.map((call) => call.id));
+  const ordered = [
+    ...rebuilt
+      .filter((call) => !gone.has(call.id))
+      .map((call) => byId.get(call.id) ?? call),
+    ...known.filter((call) => !rebuiltIds.has(call.id)),
+  ];
+  return trimmed(ordered, max);
 };

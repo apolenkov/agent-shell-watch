@@ -41,15 +41,21 @@ export const fit = (text: string, width: number): string => {
 
 /**
  * The pane's order: live calls (hung, quiet, running), failures, finished
- * calls, denied ones last; the newest first within each.
+ * calls, denied ones last; the newest first within each, the later in the
+ * list first where start times tie (rebuilt calls share one).
  * @param calls the list
  * @returns a sorted copy
  */
 export const paneOrder = (calls: readonly ShellCall[]): readonly ShellCall[] =>
-  calls.toSorted(
-    (a, b) => GROUP[a.status] - GROUP[b.status] || b.startedAt - a.startedAt,
-  );
-
+  calls
+    .map((call, index) => ({ call, index }))
+    .toSorted(
+      (a, b) =>
+        GROUP[a.call.status] - GROUP[b.call.status] ||
+        b.call.startedAt - a.call.startedAt ||
+        b.index - a.index,
+    )
+    .map(({ call }) => call);
 /**
  * The lines an expanded row adds: its full command, tail, stderr and files.
  * @param call the call

@@ -12,7 +12,7 @@ import type {
 import { atom, read, update } from "claude-code";
 
 import type { ShellCall } from "../types";
-import { liveOnly } from "./model/calls.ts";
+import { finishedIds, liveOnly } from "./model/calls.ts";
 import { configOf } from "./model/config.ts";
 
 const NO_CALLS: readonly ShellCall[] = [];
@@ -20,6 +20,13 @@ const callsAtom = atom(
   { plugin: "shell-flow", key: "calls" } as const,
   NO_CALLS,
 );
+const NO_IDS: readonly string[] = [];
+// The ids `clear` forgot, so a backfill does not bring them back.
+const clearedAtom = atom(
+  { plugin: "shell-flow", key: "cleared" } as const,
+  NO_IDS,
+);
+
 const configAtom = atom(
   { plugin: "shell-flow", key: "config" } as const,
   configOf({}),
@@ -32,6 +39,17 @@ const selectedAtom = atom(
 
 /** The pane's id and the command's name. */
 export const PANE = "shell-flow";
+
+// ponytail: the cleared ids list is capped; a transcript keeps 4096 entries.
+const CLEARED_MAX = 4096;
+
+const clearCalls = async ($: Readonly<EngineInterface>): Promise<void> => {
+  const calls = await read($, callsAtom);
+  await update($, clearedAtom, (ids) =>
+    [...ids, ...finishedIds(calls)].slice(-CLEARED_MAX),
+  );
+  await update($, callsAtom, liveOnly);
+};
 
 /**
  * `command.run` for `/shell-flow`: opens the pane, `clear` forgets finished
@@ -52,7 +70,7 @@ export const onCommand = async (
     return { text: "closed" };
   }
   if (argument === "clear") {
-    await update($, callsAtom, liveOnly);
+    await clearCalls($);
     await update($, selectedAtom, () => "");
     return { text: "finished calls cleared" };
   }

@@ -96,10 +96,91 @@ test("Bash calls are rebuilt from the transcript, finished or still running", ()
   expect(backfilled(ROWS, "a1", 10_000)[0]?.agentId).toBe("a1");
 });
 
-test("merging keeps what the state holds and adds the rest, newest kept", () => {
+test("merging keeps the state's copies in transcript order, newest kept", () => {
   const known = [callOf({ id: "u3", label: "known" })];
-  const added = merged(known, backfilled(ROWS, undefined, 0), 3);
-  expect(added.map((call) => call.id)).toEqual(["u2", "u4", "u3"]);
+  const added = merged(known, backfilled(ROWS, undefined, 0), {
+    max: 3,
+    cleared: [],
+  });
+  expect(added.map((call) => call.id)).toEqual(["u2", "u3", "u4"]);
   expect(added.find((call) => call.id === "u3")?.label).toBe("known");
-  expect(merged(added, backfilled(ROWS, undefined, 0), 3)).toHaveLength(3);
+  expect(
+    merged(added, backfilled(ROWS, undefined, 0), { max: 3, cleared: [] }),
+  ).toHaveLength(3);
+});
+
+test("a newer missed call survives the trim", () => {
+  const old = callOf({ id: "old", status: "done" });
+  const fresh = callOf({ id: "new", status: "done" });
+  expect(
+    merged([old], [old, fresh], { max: 1, cleared: [] }).map((call) => call.id),
+  ).toEqual(["new"]);
+});
+
+test("cleared calls do not come back", () => {
+  const rebuilt = backfilled(ROWS, undefined, 0);
+  expect(
+    merged([], rebuilt, { max: 10, cleared: ["u1", "u4"] }).map(
+      (call) => call.id,
+    ),
+  ).toEqual(["u2", "u3"]);
+});
+
+test("text-only answers, TaskStop and every notification are replayed", () => {
+  const rows = [
+    {
+      text: "",
+      toolUses: [
+        {
+          tool_use_id: "t1",
+          tool: "Bash",
+          input: { command: "pi -p go" },
+          text: "work\nDONE 0",
+        },
+        {
+          tool_use_id: "t2",
+          tool: "Bash",
+          input: { command: "sleep 9", run_in_background: true },
+          text: "Command running in background with ID: b7. Output is being written to: /t/b7.output.",
+        },
+        bash(
+          "t3",
+          { command: "sleep 8", run_in_background: true },
+          {
+            text: "Command was moved to the background (ID: b8). Output is being written to: /t/b8.output.",
+          },
+        ),
+        bash(
+          "t4",
+          { command: "sleep 7", run_in_background: true },
+          {
+            text: "Command running in background with ID: b9. Output is being written to: /t/b9.output.",
+          },
+        ),
+        {
+          tool_use_id: "s1",
+          tool: "TaskStop",
+          input: { task_id: "b7" },
+          text: "stopped",
+        },
+      ],
+    },
+    {
+      text: '<task-notification><task-id>b8</task-id><status>completed</status><summary>Background command "x" completed (exit code 0)</summary></task-notification>\n<task-notification><task-id>b9</task-id><status>failed</status><summary>Background command "y" failed with exit code 4</summary></task-notification>',
+      toolUses: [],
+    },
+  ];
+  const calls = backfilled(rows, undefined, 0);
+  expect(calls[0]).toMatchObject({
+    status: "done",
+    verdict: "DONE 0",
+    tail: ["work", "DONE 0"],
+  });
+  expect(calls[1]).toMatchObject({
+    status: "stopped",
+    taskId: "b7",
+    outputPath: "/t/b7.output",
+  });
+  expect(calls[2]).toMatchObject({ status: "done", taskId: "b8" });
+  expect(calls[3]).toMatchObject({ status: "failed", exitCode: 4 });
 });

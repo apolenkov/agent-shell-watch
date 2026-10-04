@@ -83,6 +83,14 @@ export const liveOnly = (calls: readonly ShellCall[]): readonly ShellCall[] =>
   calls.filter((call) => LIVE.has(call.status));
 
 /**
+ * The ids of the finished calls: what `clear` forgets for good.
+ * @param calls the list
+ * @returns their ids
+ */
+export const finishedIds = (calls: readonly ShellCall[]): readonly string[] =>
+  calls.filter((call) => !LIVE.has(call.status)).map((call) => call.id);
+
+/**
  * A call as the Bash input starts it.
  * @param input the tool call's input
  * @param now the clock's time

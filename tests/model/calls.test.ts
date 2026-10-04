@@ -2,6 +2,7 @@ import { expect, test } from "claude-code/testing";
 
 import {
   classified,
+  finishedIds,
   hasLive,
   isLive,
   liveOnly,
@@ -255,4 +256,14 @@ test("a runner with no description is labelled by its prompt", () => {
       0,
     ).label,
   ).toBe("List mods");
+});
+
+test("clearing remembers the finished ids", () => {
+  expect(
+    finishedIds([
+      callOf({ id: "a", status: "done" }),
+      callOf({ id: "b" }),
+      callOf({ id: "c", status: "denied" }),
+    ]),
+  ).toEqual(["a", "c"]);
 });
