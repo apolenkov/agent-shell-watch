@@ -73,7 +73,7 @@ test("a background run keeps running until its notification", async ($, on) => {
     run_in_background: true,
   });
   await clock.advance(1000);
-  expect(seen.statuses.at(-1)).toBe("◐ E2E 0:01");
+  expect(seen.statuses.at(-1)).toBe("◐ E2E 0:01 · no output · 1s");
   const pane = await paneOf($, "terminal");
   expect(await textOf(pane)).toContain("bg · main · npm run e2e");
   await notify($, NOTICE);
@@ -117,7 +117,7 @@ test("a missing watch file is silence from the start, not a failure", async ($, 
     command: "node w.ts --watch-file /t/none.log -- codex exec go",
     description: "Review",
   });
-  expect(seen.statuses).toContain("◐ codex · Review 2:00");
+  expect(seen.statuses).toContain("◐ codex · Review 2:00 · no output · 2m");
   expect(seen.statuses).toContain("⚠ quiet 6m codex · Review 6:00");
   expect(await textOf(await paneOf($, "terminal"))).toContain(
     "6:00  codex · Review  DONE 0",
@@ -240,7 +240,7 @@ test("a refused call is denied: dim in the pane, never on the status line", asyn
     description: "Echo test",
   });
   await clock.advance(1000);
-  expect(seen.statuses.at(-1)).toBe("◐ Wait 0:01");
+  expect(seen.statuses.at(-1)).toBe("◐ Wait 0:01 · no output · 1s");
   expect(await textOf(await paneOf($, "terminal"))).toContain(
     "Echo test  denied",
   );

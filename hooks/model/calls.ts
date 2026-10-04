@@ -159,7 +159,10 @@ const stoppedOrFinished = (
           outcome.denied === undefined ? "stopped" : "denied",
           now,
         ),
-        ...(outcome.denied !== undefined && { verdict: "denied" }),
+        ...(outcome.denied !== undefined && {
+          verdict: "denied",
+          stderr: lastLines(outcome.denied, TAIL_LINES),
+        }),
       }
     : finished(call, outcome, now);
 
@@ -241,7 +244,8 @@ export const classified = (
 };
 
 /**
- * A call after a stat of its watched file: new bytes are new output.
+ * A call after a stat of its watched file: new bytes are new output; an
+ * empty file is no output yet.
  * @param call the call
  * @param stat the file's size and mtime
  * @param now the clock's time
@@ -257,7 +261,7 @@ export const polled = (
     : {
         ...call,
         outputBytes: stat.size,
-        lastOutputAt: Math.min(stat.mtimeMs, now),
+        ...(stat.size > 0 && { lastOutputAt: Math.min(stat.mtimeMs, now) }),
       };
 
 /**

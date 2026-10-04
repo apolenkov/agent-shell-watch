@@ -4,7 +4,9 @@ import {
   agoOf,
   clockOf,
   nameOf,
+  noteOf,
   outcomeOf,
+  stateOf,
   statusLineOf,
 } from "../../hooks/model/format.ts";
 import { callOf } from "../fixtures/call-of.ts";
@@ -96,4 +98,56 @@ test("the rest are counted as +N; a denied call never shows", () => {
   expect(
     statusLineOf([callOf({ status: "denied", endedAt: 0 })], 1000),
   ).toBeUndefined();
+});
+
+test("a watched run with no output yet says so, never 'output … ago'", () => {
+  const silent = callOf({ label: "Wait", outputPath: "/t/o" });
+  expect(statusLineOf([silent], 45_000)).toBe("◐ Wait 0:45 · no output · 45s");
+  expect(stateOf(silent, 45_000)).toBe("0:45 no output · 45s");
+  expect(statusLineOf([callOf({ label: "Wait" })], 45_000)).toBe("◐ Wait 0:45");
+});
+
+test("line 1 leads with time and state, the label comes after", () => {
+  expect(
+    stateOf(callOf({ status: "done", endedAt: 1000, exitCode: 0 }), 9e9),
+  ).toBe("0:01 exit 0");
+  expect(stateOf(callOf({ lastOutputAt: 50_000 }), 51_000)).toBe(
+    "0:51 output 1s ago",
+  );
+  expect(
+    stateOf(
+      callOf({ status: "quiet", outputPath: "/t/o", lastOutputAt: 0 }),
+      360_000,
+    ),
+  ).toBe("6:00 quiet · output 6m ago");
+  expect(
+    stateOf(callOf({ status: "denied", verdict: "denied", endedAt: 0 }), 9),
+  ).toBe("0:00 denied");
+  expect(stateOf(callOf({ status: "stopped", endedAt: 3000 }), 9e9)).toBe(
+    "0:03 stopped",
+  );
+});
+
+test("each row's note: last output, a failure's last error, a denial's reason", () => {
+  expect(noteOf(callOf({ status: "done", tail: ["README.md", ""] }))).toEqual({
+    tone: "output",
+    text: "README.md",
+  });
+  expect(
+    noteOf(
+      callOf({
+        status: "failed",
+        tail: ["x"],
+        stderr: ["Exit code 2", "src/a.ts(3,1): error TS2322", ""],
+      }),
+    ),
+  ).toEqual({ tone: "error", text: "src/a.ts(3,1): error TS2322" });
+  expect(noteOf(callOf({ status: "failed", tail: ["last words"] }))).toEqual({
+    tone: "error",
+    text: "last words",
+  });
+  expect(
+    noteOf(callOf({ status: "denied", stderr: ["Permission denied by rule"] })),
+  ).toEqual({ tone: "denied", text: "Permission denied by rule" });
+  expect(noteOf(callOf())).toBeUndefined();
 });

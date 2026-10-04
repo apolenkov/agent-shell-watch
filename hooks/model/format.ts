@@ -89,15 +89,80 @@ export const saysOf = (call: ShellCall): string | undefined =>
 const silentOf = (call: ShellCall, now: number): string =>
   agoOf(now - (call.lastOutputAt ?? call.startedAt));
 
+const isWatched = (call: ShellCall): boolean =>
+  call.outputPath !== undefined || call.watchPath !== undefined;
+
+/**
+ * How fresh a live call's output is: `output 4s ago`, `no output · 45s` for a
+ * watched file still empty, nothing when nothing is watched.
+ * @param call the call
+ * @param now the clock's time
+ * @returns the phrase, empty when unknown
+ */
+const silenceOf = (call: ShellCall, now: number): string =>
+  isWatched(call) ? `no output · ${agoOf(now - call.startedAt)}` : "";
+
+const freshOf = (call: ShellCall, now: number): string =>
+  call.lastOutputAt === undefined
+    ? silenceOf(call, now)
+    : `output ${agoOf(now - call.lastOutputAt)} ago`;
+
 const runningSegment = (call: ShellCall, now: number): string => {
   const says = saysOf(call);
   return [
     `◐ ${nameOf(call)} ${clockOf(now - call.startedAt)}`,
-    ...(call.lastOutputAt === undefined
-      ? []
-      : [`output ${agoOf(now - call.lastOutputAt)} ago`]),
+    freshOf(call, now),
     ...(says === undefined ? [] : [`› ${cut(says, SAYS_MAX)}`]),
-  ].join(" · ");
+  ]
+    .filter((part) => part !== "")
+    .join(" · ");
+};
+
+/**
+ * Line 1's state, before the label so a narrow pane cuts the label first:
+ * elapsed time, then freshness while live, else the outcome or the status.
+ * @param call the call
+ * @param now the clock's time
+ * @returns `0:51 output 1s ago`, `6:00 quiet · output 6m ago`, `0:01 exit 0`
+ */
+export const stateOf = (call: ShellCall, now: number): string => {
+  const elapsed = clockOf((call.endedAt ?? now) - call.startedAt);
+  const live = [
+    call.status === "running" ? "" : call.status,
+    freshOf(call, now),
+  ];
+  const ended = [outcomeOf(call) === "" ? call.status : outcomeOf(call)];
+  const parts = (isLive(call) ? live : ended).filter((part) => part !== "");
+  return [elapsed, parts.join(" · ")].filter((part) => part !== "").join(" ");
+};
+
+/** What a row's third line says, and in which tone. */
+export interface Note {
+  readonly tone: "output" | "error" | "denied";
+  readonly text: string;
+}
+
+const lastOf = (lines: readonly string[]): string | undefined =>
+  lines.findLast((line) => line.trim() !== "")?.trim();
+
+const TONE: Readonly<Partial<Record<ShellStatus, Note["tone"]>>> = {
+  failed: "error",
+  denied: "denied",
+};
+
+/**
+ * A row's note: a denial's reason, a failure's last error line (else its
+ * last output), otherwise the last output line.
+ * @param call the call
+ * @returns the note, or undefined when there is nothing to say
+ */
+export const noteOf = (call: ShellCall): Note | undefined => {
+  const tone = TONE[call.status] ?? "output";
+  const text =
+    tone === "output"
+      ? lastOf(call.tail)
+      : (lastOf(call.stderr) ?? lastOf(call.tail));
+  return text === undefined ? undefined : { tone, text };
 };
 
 const SEGMENT: Readonly<

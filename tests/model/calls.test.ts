@@ -150,6 +150,27 @@ test("a stat with new output refreshes freshness", () => {
     lastOutputAt: 50,
   });
   expect(polled(call, { size: 10, mtimeMs: 0 }, 60).lastOutputAt).toBe(0);
+  const empty = polled(
+    callOf({ outputPath: "/t/o" }),
+    { size: 0, mtimeMs: 5 },
+    9,
+  );
+  expect(empty.outputBytes).toBe(0);
+  expect(empty.lastOutputAt).toBeUndefined();
+});
+
+test("a denied call keeps its reason", () => {
+  expect(
+    settled(
+      callOf(),
+      {
+        isError: false,
+        text: "",
+        denied: "Permission to use Bash has been denied.",
+      },
+      9,
+    ).stderr,
+  ).toEqual(["Permission to use Bash has been denied."]);
 });
 
 test("a tail read keeps the last 40 lines and the runner verdict", () => {
