@@ -47,7 +47,7 @@ test("a running runner shows elapsed, freshness and what it says now", () => {
     tail: ["reading files", "applying patch", ""],
   });
   expect(statusLineOf([codex], 133_000)).toBe(
-    "shell: ◐ codex · Review diff 2:13 · output 4s ago · › applying patch",
+    "◐ codex · Review diff 2:13 · output 4s ago · › applying patch",
   );
 });
 
@@ -66,17 +66,17 @@ test("the most urgent leads; the rest are counted", () => {
     }),
   ];
   expect(statusLineOf(calls, 7 * MIN)).toBe(
-    "shell: ✗ Typecheck exit 2 · +1 quiet · +2 bg · +1 running",
+    "✗ Typecheck exit 2 · +1 quiet · +2 bg · +1 running",
   );
   expect(
     statusLineOf(
       [callOf({ status: "hung", runner: "pi", label: "Fix", lastOutputAt: 0 })],
       12 * MIN,
     ),
-  ).toBe("shell: ⚠ hung 12m pi · Fix");
+  ).toBe("⚠ hung 12m pi · Fix");
   expect(
     statusLineOf([callOf({ status: "quiet", lastOutputAt: 0 })], 6 * MIN),
-  ).toBe("shell: ⚠ quiet 6m Run tests 6:00");
+  ).toBe("⚠ quiet 6m Run tests 6:00");
 });
 
 test("the rest are counted as +N; a denied call never shows", () => {
@@ -85,16 +85,14 @@ test("the rest are counted as +N; a denied call never shows", () => {
     callOf({ id: "f2", status: "failed", exitCode: 1, endedAt: 50_000 }),
     callOf({ id: "d", status: "denied", verdict: "denied", endedAt: 59_000 }),
   ];
-  expect(statusLineOf(failed, 60_000)).toBe(
-    "shell: ✗ Run tests exit 1 · +1 failed",
-  );
+  expect(statusLineOf(failed, 60_000)).toBe("✗ Run tests exit 1 · +1 failed");
   expect(statusLineOf(failed, 11 * MIN)).toBeUndefined();
   expect(
     statusLineOf(
       [callOf({ id: "h", status: "hung", lastOutputAt: 0 }), ...failed],
       60_000,
     ),
-  ).toBe("shell: ⚠ hung 1m Run tests · +2 failed");
+  ).toBe("⚠ hung 1m Run tests · +2 failed");
   expect(
     statusLineOf([callOf({ status: "denied", endedAt: 0 })], 1000),
   ).toBeUndefined();

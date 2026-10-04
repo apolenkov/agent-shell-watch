@@ -161,5 +161,5 @@ export const statusLineOf = (
   const [head, ...rest] = shown;
   return head === undefined
     ? undefined
-    : `shell: ${[SEGMENT[head.status](head, now), ...countsOf(rest)].join(" · ")}`;
+    : [SEGMENT[head.status](head, now), ...countsOf(rest)].join(" · ");
 };
