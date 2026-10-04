@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/apolenkov/claude-shell-flow/compare/v0.2.0...v0.2.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* **shell-flow:** an inline pane asks for its height; a live runner keeps its last line ([697a12a](https://github.com/apolenkov/claude-shell-flow/commit/697a12a5f060ae0cdb190ba0216d3bbeb41f0b17))
+
 ## [0.2.0](https://github.com/apolenkov/claude-mods/compare/shell-flow-v0.1.0...shell-flow-v0.2.0) (2026-10-04)
 
 
