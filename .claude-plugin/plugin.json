@@ -1,6 +1,6 @@
 {
   "name": "agent-shell-watch",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Always-on status line and a pane for this session's Bash calls, background tasks and Codex/Pi/Devin/OpenCodeReview runs: elapsed time, output freshness, verdicts and errors.",
   "author": {
     "name": "apolenkov",
