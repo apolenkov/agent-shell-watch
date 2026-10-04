@@ -20,7 +20,7 @@ Set TypingSpeed 25ms
 Hide
 Type `unset CLAUDE_CODE_CHILD_SESSION CLAUDECODE; export PATH="$PWD/demo/bin:$PATH"; cd /tmp/my-app; clear`
 Enter
-Type `claude --settings '{"statusLine":{"type":"command","command":"true"},"enabledPlugins":{"council@agent-watch":false},"pluginConfigs":{"agents-md@builtin":{"options":{"instructionFiles":"managed-only"}}}}'`
+Type `claude --settings '{"statusLine":{"type":"command","command":"true"},"enabledPlugins":{"agent-council@agent-watch":false},"pluginConfigs":{"agents-md@builtin":{"options":{"instructionFiles":"managed-only"}}}}'`
 Enter
 Sleep 8s
 Show
