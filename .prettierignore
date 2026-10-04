@@ -2,3 +2,8 @@ node_modules/
 types/claude-code.d.ts
 mods/*/.claude-plugin/types/
 package-lock.json
+# Written by release-please in its own JSON/Markdown layout; plugin.json is
+# still checked by `claude plugin validate --strict`.
+.release-please-manifest.json
+mods/*/CHANGELOG.md
+mods/*/.claude-plugin/plugin.json
