@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/apolenkov/agent-shell-watch/compare/v0.3.0...v0.3.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* **agent-shell-watch:** a search's exit 1 is no match; unknown times read — ([dc3c1a1](https://github.com/apolenkov/agent-shell-watch/commit/dc3c1a1f3875061effdb3542fe3c7448d7303297))
+
 ## [0.3.0](https://github.com/apolenkov/agent-shell-watch/compare/v0.2.1...v0.3.0) (2026-10-04)
 
 
