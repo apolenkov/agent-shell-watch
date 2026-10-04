@@ -57,7 +57,10 @@ const eslintConfig: Linter.Config[] = defineConfig(
   {
     languageOptions: {
       parserOptions: {
-        projectService: { allowDefaultProject: ["*.config.ts"] },
+        // Explicit projects, not the project service: Claude Code lays its own
+        // tsconfig.json into a mod folder it loads with --plugin-dir, which the
+        // service would pick up as the nearest one.
+        project: ["./tsconfig.json", "./tsconfig.tools.json"],
         tsconfigRootDir: import.meta.dirname,
       },
     },
