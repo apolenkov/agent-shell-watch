@@ -103,12 +103,76 @@ for (const surface of SURFACES) {
       description: "Wait",
       run_in_background: true,
     });
-    const pane = await paneOf($, surface, { columns: 80, rows: 12 });
+    const pane = await paneOf($, surface, { columns: 80, rows: 6 });
     const found = await pane.findAll({ type: "Text" });
     const texts = found.map((t) => t.text);
     expect(texts.indexOf("Wait")).toBeLessThan(texts.indexOf("Old 5"));
     expect(texts.indexOf("Old 5")).toBeLessThan(texts.indexOf("Old 4"));
     expect(texts).not.toContain("Old 1");
     expect(texts.some((text) => /^\+\d+ older$/u.test(text))).toBe(true);
+  });
+}
+
+for (const surface of SURFACES) {
+  test(`${surface}: one row of room still shows the live and the failed row`, async ($, on) => {
+    mock.clock(on);
+    world(on);
+    on("tool.call", { tool: "Bash" }, (_$, e) =>
+      e.command === "tsc"
+        ? { isError: true, result: "Exit code 2", text: "Exit code 2\nboom" }
+        : answer(_$, e),
+    );
+    await $.session.start(START);
+    await $.tool.call({ tool: "Bash", command: "ls", description: "List" });
+    await $.tool.call({
+      tool: "Bash",
+      command: "tsc",
+      description: "Typecheck",
+    });
+    await $.tool.call({
+      tool: "Bash",
+      command: "sleep 60",
+      description: "Wait",
+      run_in_background: true,
+    });
+    const pane = await paneOf($, surface, { columns: 80, rows: 3 });
+    const found = await pane.findAll({ type: "Text" });
+    const texts = found.map((t) => t.text);
+    expect(texts).toContain("Wait");
+    expect(texts).toContain("Typecheck");
+    expect(texts.some((text) => text.includes("sleep 60"))).toBe(false);
+    expect(texts).toContain("+1 older");
+  });
+
+  test(`${surface}: an expanded row short of room keeps its newest lines`, async ($, on) => {
+    mock.clock(on);
+    world(on);
+    const steps = Array.from(
+      { length: 30 },
+      (_, index) => `step ${String(index + 1)}`,
+    );
+    on("tool.call", { tool: "Bash" }, () => ({
+      result: {
+        stdout: `${steps.join("\n")}\n`,
+        stderr: "",
+        interrupted: false,
+      },
+      text: "",
+    }));
+    await $.session.start(START);
+    await $.tool.call({ tool: "Bash", command: "count", description: "Count" });
+    const pane = await paneOf($, surface, { columns: 80, rows: 12 });
+    const buttons = await pane.findAll({ type: "Button" });
+    const row = buttons.find(
+      (button) => button.key?.startsWith("row:") === true,
+    );
+    await pane.press({ key: row?.key ?? "" });
+    const found = await pane.findAll({ type: "Text" });
+    const texts = found.map((t) => t.text.trim());
+    expect(texts).toContain("step 30");
+    expect(texts).not.toContain("step 1");
+    expect(texts.some((text) => /^… \d+ earlier lines$/u.test(text))).toBe(
+      true,
+    );
   });
 }

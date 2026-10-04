@@ -77,29 +77,95 @@ export const rowsOf = (call: ShellCall, selected: string): number =>
 const sumOf = (values: readonly number[]): number =>
   values.length === 0 ? 0 : (values[0] ?? 0) + sumOf(values.slice(1));
 
-/** The rows that fit, and how many older ones did not. */
+/** The rows that fit, how many older ones did not, and how they draw. */
 export interface Visible {
   readonly shown: readonly ShellCall[];
   readonly hidden: number;
+  /** Rows but the selected one take one line (state and label). */
+  readonly isCompact: boolean;
+  /** The lines the selected row's details may take. */
+  readonly detailRoom: number;
 }
 
+const baseOf = (call: ShellCall): number =>
+  HEAD_AND_SOURCE + (noteOf(call) === undefined ? 0 : 1);
+
+// Live and failed rows, and the selected one, are always drawn.
+const isKept = (call: ShellCall, selected: string): boolean =>
+  isLive(call) || call.status === "failed" || call.id === selected;
+
+const compactLinesOf = (call: ShellCall, selected: string): number =>
+  call.id === selected ? baseOf(call) + 1 : 1;
+
+const prefixFit = (lines: readonly number[], room: number): number =>
+  lines.filter((_, index) => sumOf(lines.slice(0, index + 1)) <= room).length;
+
+const compactOf = (
+  ordered: readonly ShellCall[],
+  selected: string,
+  budget: number,
+): Visible => {
+  const linesOf = (calls: readonly ShellCall[]): readonly number[] =>
+    calls.map((call) => compactLinesOf(call, selected));
+  const kept = ordered.filter((call) => isKept(call, selected));
+  const optional = ordered.filter((call) => !isKept(call, selected));
+  const room = budget - sumOf(linesOf(kept));
+  const isAll = sumOf(linesOf(optional)) <= room;
+  const count = isAll
+    ? optional.length
+    : prefixFit(linesOf(optional), room - 1);
+  const taken = new Set(optional.slice(0, count).map((call) => call.id));
+  const shown = ordered.filter(
+    (call) => isKept(call, selected) || taken.has(call.id),
+  );
+  const hidden = ordered.length - shown.length;
+  const others = sumOf(
+    shown.filter((call) => call.id !== selected).map(() => 1),
+  );
+  const chosen = shown.find((call) => call.id === selected);
+  const detailRoom =
+    budget -
+    others -
+    (chosen === undefined ? 0 : baseOf(chosen)) -
+    Math.min(1, hidden);
+  return { shown, hidden, isCompact: true, detailRoom };
+};
+
 /**
- * The rows that fit `budget` lines, keeping one for `+N older` when some do
- * not: the last (oldest finished) rows go first, a live row never.
+ * The rows that fit `budget` lines. Short of room, every row but the selected
+ * one draws on one line; then the oldest finished and denied rows go, leaving
+ * a line for `+N older`. Live, failed and selected rows are always drawn.
  * @param ordered the rows in pane order
  * @param selected the expanded row's id
  * @param budget the lines the rows may take
- * @returns the rows shown and the count left out
+ * @returns the rows shown, the count left out, and how they draw
  */
 export const visibleOf = (
   ordered: readonly ShellCall[],
   selected: string,
   budget: number,
-): Visible => {
-  const lines = ordered.map((call) => rowsOf(call, selected));
-  const limit = sumOf(lines) <= budget ? budget : budget - 1;
-  const shown = ordered.filter(
-    (call, index) => isLive(call) || sumOf(lines.slice(0, index + 1)) <= limit,
-  );
-  return { shown, hidden: ordered.length - shown.length };
+): Visible =>
+  sumOf(ordered.map((call) => rowsOf(call, selected))) <= budget
+    ? {
+        shown: ordered,
+        hidden: 0,
+        isCompact: false,
+        detailRoom: Infinity,
+      }
+    : compactOf(ordered, selected, budget);
+
+/**
+ * The newest lines that fit `room`, the earlier ones counted on top.
+ * @param lines the lines, oldest first
+ * @param room the lines available
+ * @returns the lines to draw
+ */
+export const tailFit = (
+  lines: readonly string[],
+  room: number,
+): readonly string[] => {
+  const count = Math.max(0, room - 1);
+  const newest = count === 0 ? [] : lines.slice(-count);
+  const cut = [`… ${String(lines.length - count)} earlier lines`, ...newest];
+  return lines.length <= room ? lines : cut.slice(0, Math.max(0, room));
 };

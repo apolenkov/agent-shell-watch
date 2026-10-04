@@ -13,6 +13,8 @@ import {
   fit,
   oneLine,
   paneOrder,
+  tailFit,
+  type Visible,
   visibleOf,
 } from "../model/layout.ts";
 
@@ -88,6 +90,8 @@ interface Context {
   readonly act: PaneActions;
   /** The only stoppable row gets the `s` hotkey. */
   readonly stopKey: string;
+  /** How the rows fit: compact rows, and the room for details. */
+  readonly fit: Pick<Visible, "isCompact" | "detailRoom">;
 }
 
 /** One row as drawn: its call and its place among the shown rows. */
@@ -104,7 +108,7 @@ const digitOf = (index: number): Readonly<{ hotkey?: string }> =>
 
 const stopOf = (
   kit: Readonly<Kit>,
-  { act, stopKey }: Context,
+  { act, stopKey }: Pick<Context, "act" | "stopKey">,
   call: ShellCall,
 ): Readonly<RenderElement> | false => {
   const { Button } = kit;
@@ -150,7 +154,7 @@ const headRowOf = (
       <Text dimColor={call.status === "denied"} wrap="truncate-end">
         {fit(oneLine(nameOf(call)), room)}
       </Text>
-      {stopOf(kit, { view, act, stopKey }, call)}
+      {stopOf(kit, { act, stopKey }, call)}
     </Box>
   );
 };
@@ -178,32 +182,43 @@ const noteRowOf = (
   ];
 };
 
+const bodyOf = (
+  kit: Readonly<Kit>,
+  { view, fit: room }: Context,
+  call: ShellCall,
+): readonly Readonly<RenderElement>[] => {
+  const { Text } = kit;
+  const width = view.columns - NOTE_INDENT;
+  const isSelected = view.selected === call.id;
+  if (!isSelected && room.isCompact) {
+    return [];
+  }
+  const source = `${sourceOf(call, view.agents)} · ${call.command}`;
+  const details = isSelected ? tailFit(detailsOf(call), room.detailRoom) : [];
+  return [
+    <Text dimColor wrap="truncate-end">
+      {fit(oneLine(source), width)}
+    </Text>,
+    ...noteRowOf(kit, view, call),
+    ...details.map((line) => (
+      <Text dimColor wrap="truncate-end">
+        {fit(`  ${line.replaceAll("\t", "  ")}`, width)}
+      </Text>
+    )),
+  ];
+};
+
 const rowOf = (
   kit: Readonly<Kit>,
   context: Context,
   row: Row,
 ): Readonly<RenderElement> => {
-  const { Box, Text } = kit;
-  const { call } = row;
-  const { view } = context;
-  const details = view.selected === call.id ? detailsOf(call) : [];
-  const source = `${sourceOf(call, view.agents)} · ${call.command}`;
+  const { Box } = kit;
   return (
-    <Box key={`call:${call.id}`} flexDirection="column">
+    <Box key={`call:${row.call.id}`} flexDirection="column">
       {headRowOf(kit, context, row)}
       <Box paddingLeft={NOTE_INDENT} flexDirection="column">
-        <Text dimColor wrap="truncate-end">
-          {fit(oneLine(source), view.columns - NOTE_INDENT)}
-        </Text>
-        {noteRowOf(kit, view, call)}
-        {details.map((line) => (
-          <Text dimColor wrap="truncate-end">
-            {fit(
-              `  ${line.replaceAll("\t", "  ")}`,
-              view.columns - NOTE_INDENT,
-            )}
-          </Text>
-        ))}
+        {bodyOf(kit, context, row.call)}
       </Box>
     </Box>
   );
@@ -241,7 +256,7 @@ export const paneTree = (
   act: PaneActions,
 ): Readonly<RenderElement> => {
   const { Box, Text } = kit;
-  const { shown, hidden } = visibleOf(
+  const { shown, hidden, isCompact, detailRoom } = visibleOf(
     paneOrder(view.calls),
     view.selected,
     view.rows - CHROME_ROWS,
@@ -255,7 +270,11 @@ export const paneTree = (
       {toolbarOf(kit, act)}
       {shown.length === 0 && <Text dimColor>No Bash calls yet.</Text>}
       {shown.map((call, index) =>
-        rowOf(kit, { view, act, stopKey }, { call, index }),
+        rowOf(
+          kit,
+          { view, act, stopKey, fit: { isCompact, detailRoom } },
+          { call, index },
+        ),
       )}
       {hidden > 0 && <Text dimColor>{`+${String(hidden)} older`}</Text>}
       <Text dimColor wrap="truncate-end">

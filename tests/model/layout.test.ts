@@ -5,6 +5,7 @@ import {
   oneLine,
   paneOrder,
   rowsOf,
+  tailFit,
   visibleOf,
 } from "../../hooks/model/layout.ts";
 import { callOf } from "../fixtures/call-of.ts";
@@ -47,18 +48,59 @@ test("a row takes its lines: head, source, a note, the expansion", () => {
   expect(rowsOf(callOf({ id: "t1", tail: ["x"] }), "t1")).toBeGreaterThan(3);
 });
 
-test("what does not fit drops the oldest finished rows, never a live one", () => {
+test("short of height: compact rows first, then the oldest finished go", () => {
   const ordered = paneOrder([
     callOf({ id: "run", startedAt: 5 }),
+    callOf({ id: "fail", status: "failed", startedAt: 1, stderr: ["boom"] }),
     callOf({ id: "a", status: "done", startedAt: 4 }),
     callOf({ id: "b", status: "done", startedAt: 3 }),
-    callOf({ id: "c", status: "done", startedAt: 2 }),
+    callOf({ id: "c", status: "denied", startedAt: 2 }),
   ]);
-  const cut = visibleOf(ordered, "", 6);
-  expect(cut.shown.map((call) => call.id)).toEqual(["run", "a"]);
-  expect(cut.hidden).toBe(2);
-  expect(visibleOf(ordered, "", 100).hidden).toBe(0);
-  expect(visibleOf(ordered, "", 1).shown.map((call) => call.id)).toEqual([
+  const roomy = visibleOf(ordered, "", 100);
+  expect(roomy).toMatchObject({ hidden: 0, isCompact: false });
+
+  const compact = visibleOf(ordered, "", 6);
+  expect(compact.isCompact).toBe(true);
+  expect(compact.shown.map((call) => call.id)).toEqual([
     "run",
+    "fail",
+    "a",
+    "b",
+    "c",
   ]);
+
+  const tight = visibleOf(ordered, "", 3);
+  expect(tight.shown.map((call) => call.id)).toEqual(["run", "fail"]);
+  expect(tight.hidden).toBe(3);
+
+  const one = visibleOf(ordered, "", 1);
+  expect(one.shown.map((call) => call.id)).toEqual(["run", "fail"]);
+});
+
+test("the selected row keeps its lines and gets the room left for details", () => {
+  const ordered = paneOrder([
+    callOf({ id: "run", startedAt: 5 }),
+    callOf({
+      id: "sel",
+      status: "done",
+      startedAt: 4,
+      tail: Array.from(
+        { length: 30 },
+        (_, index) => `step ${String(index + 1)}`,
+      ),
+    }),
+    callOf({ id: "old", status: "done", startedAt: 1 }),
+  ]);
+  const cut = visibleOf(ordered, "sel", 12);
+  expect(cut.isCompact).toBe(true);
+  expect(cut.shown.map((call) => call.id)).toEqual(["run", "sel", "old"]);
+  // 12 - run 1 - old 1 - sel head, source and note 3
+  expect(cut.detailRoom).toBe(7);
+});
+
+test("details keep the newest lines that fit, the rest counted on top", () => {
+  const lines = ["$ run", "step 1", "step 2", "step 3", "step 4"];
+  expect(tailFit(lines, 10)).toEqual(lines);
+  expect(tailFit(lines, 3)).toEqual(["… 3 earlier lines", "step 3", "step 4"]);
+  expect(tailFit(lines, 0)).toEqual([]);
 });
