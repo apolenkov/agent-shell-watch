@@ -1,0 +1,8 @@
+#!/bin/sh
+# Stand-in for the Codex CLI so the demo is reproducible and costs nothing:
+# it prints review progress the way a real `codex exec review` run does.
+for f in parser lexer cache api router auth store queue jobs mailer billing search; do
+  echo "reviewing src/$f.ts"
+  sleep 3
+done
+echo "2 findings"

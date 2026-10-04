@@ -10,6 +10,12 @@ failed. shell-flow watches this session's Bash calls (main loop and every
 subagent), background tasks, and above all the external agent runs delegated
 through the shell: Codex, Pi, Devin and OpenCodeReview (`ocr`).
 
+![shell-flow: a background Codex review ticking with its current file, a failed typecheck, the status line](demo/demo.gif)
+
+<sub>Recorded with [vhs](https://github.com/charmbracelet/vhs) from
+[`demo/demo.tape`](demo/demo.tape); `codex` and `tsc` are stand-ins from
+`demo/bin` so the recording is free and repeatable.</sub>
+
 ## What it shows
 
 An always-on status line while anything runs, or a call failed in the last

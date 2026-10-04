@@ -1,0 +1,5 @@
+#!/bin/sh
+# Stand-in for `tsc --noEmit` with one real-looking type error.
+sleep 1
+echo "src/cache.ts(12,5): error TS2322: Type 'string' is not assignable to type 'number'." >&2
+exit 2
