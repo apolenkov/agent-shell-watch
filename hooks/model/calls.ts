@@ -8,6 +8,7 @@ import {
   labelOf,
   lastLines,
   outputPathOf,
+  promptWordsOf,
   runnerOf,
   type TaskNotice,
   verdictOf,
@@ -93,7 +94,12 @@ export const started = (input: BashStart, now: number): ShellCall => {
   return {
     id: input.tool_use_id,
     ...(input.agentId !== undefined && { agentId: input.agentId }),
-    label: labelOf(input.description, input.command),
+    label: labelOf(
+      input.description,
+      runner === undefined
+        ? input.command
+        : (promptWordsOf(input.command) ?? input.command),
+    ),
     command: input.command,
     startedAt: now,
     background: false,

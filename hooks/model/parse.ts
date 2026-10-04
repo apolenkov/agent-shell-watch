@@ -11,6 +11,9 @@ const RUNNERS: ReadonlySet<string> = new Set(["codex", "pi", "devin", "ocr"]);
 const SEGMENT = /[;&|()]|\s--\s/u;
 const ASSIGNMENT = /^\w+=/u;
 const SHELL_C = /(?:^|\s)(?:ba|z)?sh\s+-l?c\s+['"]?/gu;
+const TEE = /\|\s*tee\s+(?:-a\s+)?(?:'([^']+)'|"([^"]+)"|([^\s;&|<>'"]+))/u;
+const PROMPT = /(?:\s-p|\sexec)\s+(?:'([^']*)'|"([^"]*)"|([^\s;&|<>'"]+))/u;
+const PROMPT_WORDS = 6;
 const REDIRECT = /(?:^|\s)1?>>?\s*(?:'([^']+)'|"([^"]+)"|([^\s;&|<>'"]+))/u;
 const LINE_MAX = 200;
 const WATCH_FILE = /--watch-file(?:=|\s+)(?:'([^']*)'|"([^"]*)"|(\S+))/u;
@@ -71,25 +74,42 @@ export const runnerOf = (command: string): ShellRunner | undefined =>
     )
     .find((name) => RUNNERS.has(name)) as ShellRunner | undefined;
 
-const redirectOf = (command: string): string | undefined => {
-  const found = REDIRECT.exec(command);
+const absoluteOf = (
+  pattern: Readonly<RegExp>,
+  command: string,
+): string | undefined => {
+  const found = pattern.exec(command);
   const target = found?.[1] ?? found?.[2] ?? found?.[3];
   return target?.startsWith("/") === true ? target : undefined;
 };
 
 /**
- * The file whose growth is a runner's output: the guard's `--watch-file`, or
- * a runner's absolute stdout redirect (`> /path`, what the guard would watch).
+ * The file whose growth is a runner's output: the guard's `--watch-file`, a
+ * runner's `| tee [-a] /path`, or its absolute stdout redirect (`> /path`).
  * @param command the Bash command, as the model wrote it or as wrapped
  * @returns the path, or undefined
  */
 export const watchPathOf = (command: string): string | undefined => {
   const found = WATCH_FILE.exec(command);
   const flagged = found?.[1] ?? found?.[2] ?? found?.[3];
-  return (
-    flagged ??
-    (runnerOf(command) === undefined ? undefined : redirectOf(command))
-  );
+  const piped = absoluteOf(TEE, command) ?? absoluteOf(REDIRECT, command);
+  return flagged ?? (runnerOf(command) === undefined ? undefined : piped);
+};
+
+/**
+ * A runner's prompt in its first words (`pi -p '…'`, `codex exec '…'`): its
+ * label when the call has no description.
+ * @param command the Bash command
+ * @returns up to six words, `…` when cut, or undefined without a prompt
+ */
+export const promptWordsOf = (command: string): string | undefined => {
+  const found = PROMPT.exec(command);
+  const words = (found?.[1] ?? found?.[2] ?? found?.[3] ?? "")
+    .split(/\s+/u)
+    .filter((word) => word !== "");
+  const more = words.length > PROMPT_WORDS ? "…" : "";
+  const head = `${words.slice(0, PROMPT_WORDS).join(" ")}${more}`;
+  return words.length === 0 ? undefined : head;
 };
 
 /**

@@ -237,3 +237,22 @@ test("a runner's redirect is its watch file; any finished bg call is read once m
       ?.needsTail,
   ).toBe(true);
 });
+
+test("a runner with no description is labelled by its prompt", () => {
+  expect(
+    started(
+      { tool_use_id: "u", command: "pi -p 'list mods' 2>&1 | tee /t/p.log" },
+      0,
+    ),
+  ).toMatchObject({ runner: "pi", label: "list mods", watchPath: "/t/p.log" });
+  expect(
+    started(
+      {
+        tool_use_id: "u",
+        command: "pi -p 'list mods'",
+        description: "List mods",
+      },
+      0,
+    ).label,
+  ).toBe("List mods");
+});

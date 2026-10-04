@@ -7,6 +7,7 @@ import {
   lastLines,
   noticesOf,
   outputPathOf,
+  promptWordsOf,
   runnerOf,
   verdictOf,
   watchPathOf,
@@ -119,4 +120,29 @@ test("a runner is found inside a shell wrapper, the guard's included", () => {
   expect(runnerOf('sh -c "devin -p go"')).toBe("devin");
   expect(runnerOf("bash -lc 'ocr review'")).toBe("ocr");
   expect(runnerOf("bash -c 'echo pi'")).toBeUndefined();
+});
+
+test("a runner's tee at the end of its pipeline is its watch file", () => {
+  expect(watchPathOf("pi -p 'list mods' 2>&1 | tee /t/pi.log")).toBe(
+    "/t/pi.log",
+  );
+  expect(watchPathOf("codex exec go | tee -a '/t/c x.log'")).toBe("/t/c x.log");
+  expect(watchPathOf("ls | tee /t/ls.txt")).toBeUndefined();
+  expect(
+    watchPathOf(
+      "node w.ts --silence 600 -- bash -c 'pi -p go 2>&1 | tee /t/w.log'",
+    ),
+  ).toBe("/t/w.log");
+});
+
+test("a runner's prompt gives its first words", () => {
+  expect(
+    promptWordsOf(
+      'pi -p "List mods in this repo and say which ones lack tests" 2>&1 | tee /t/p.log',
+    ),
+  ).toBe("List mods in this repo and…");
+  expect(promptWordsOf("devin -p 'fix it'")).toBe("fix it");
+  expect(promptWordsOf("codex exec 'review the diff'")).toBe("review the diff");
+  expect(promptWordsOf("codex exec review")).toBe("review");
+  expect(promptWordsOf("ls -la")).toBeUndefined();
 });
