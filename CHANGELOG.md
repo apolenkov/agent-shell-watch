@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/apolenkov/agent-shell-watch/compare/v0.2.1...v0.3.0) (2026-10-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* **agent-shell-watch:** the plugin name and the command change. Uninstall shell-flow and install agent-shell-watch; /shell-flow is now /shell-watch, and the remembered pane state starts afresh.
+
+### Features
+
+* **agent-shell-watch:** rename shell-flow to agent-shell-watch ([5eb85b3](https://github.com/apolenkov/agent-shell-watch/commit/5eb85b3ab6b5cc947f67bee0ce24d131764220b8))
+
 ## [0.2.1](https://github.com/apolenkov/claude-shell-flow/compare/v0.2.0...v0.2.1) (2026-10-04)
 
 
