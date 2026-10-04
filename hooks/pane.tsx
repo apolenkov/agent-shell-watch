@@ -94,6 +94,7 @@ export const onRender = async (
       now,
       selected: await read($, selectedAtom),
       columns: e.props.bodyColumns,
+      rows: e.props.scroll.bodyRows,
     },
     {
       clear: () => {

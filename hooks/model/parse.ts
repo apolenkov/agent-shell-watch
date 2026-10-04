@@ -41,7 +41,8 @@ export const labelOf = (
   command: string,
 ): string => {
   const text = description?.trim() ?? "";
-  return text === "" ? command.trim().slice(0, LABEL_MAX) : text;
+  const head = command.replaceAll(/\s+/gu, " ").trim().slice(0, LABEL_MAX);
+  return text === "" ? head : text.replaceAll(/\s+/gu, " ");
 };
 
 /**

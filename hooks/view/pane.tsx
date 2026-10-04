@@ -1,6 +1,6 @@
 /**
- * The pane's tree: housekeeping buttons, then one row per call,
- * newest first, a selected row expanded to its command, tail and stderr.
+ * The pane's tree: housekeeping buttons, then one row per call, live ones
+ * first and the newest first, as many as fit the height, a selected row expanded to its command, tail and stderr.
  * Each row leads with a `[ ▸ ]` Button, so Tab reaches it and Enter expands.
  */
 import type { Elements, RenderElement } from "claude-code";
@@ -8,6 +8,13 @@ import type { Elements, RenderElement } from "claude-code";
 import type { ShellAgents, ShellCall, ShellStatus } from "../../types";
 import { isLive } from "../model/calls.ts";
 import { GLYPH, nameOf, type Note, noteOf, stateOf } from "../model/format.ts";
+import {
+  detailsOf,
+  fit,
+  oneLine,
+  paneOrder,
+  visibleOf,
+} from "../model/layout.ts";
 
 /** The elements the pane draws with, on every surface that has a pane. */
 export type Kit = Pick<Elements["terminal"], "Box" | "Button" | "Text">;
@@ -20,6 +27,8 @@ export interface PaneView {
   readonly selected: string;
   /** The pane body's width in cells (`e.props.bodyColumns`). */
   readonly columns: number;
+  /** The pane body's height in rows (`e.props.scroll.bodyRows`). */
+  readonly rows: number;
 }
 
 /** What the pane's buttons do. */
@@ -49,6 +58,11 @@ const sourceOf = (call: ShellCall, agents: ShellAgents): string => {
 };
 
 const NOTE_INDENT = 6;
+// `[1 ▸] ● ` before the state, a gap before the label, `[s stop]` after it.
+const HEAD_PREFIX = 9;
+const STOP_WIDTH = 9;
+// The toolbar and the hint line around the rows.
+const CHROME_ROWS = 2;
 const HOTKEYS = 9;
 const HINT = "ctrl+x tab focus · 1–9 expand · c clear";
 
@@ -63,17 +77,6 @@ const NOTE_LOOK: Readonly<Record<Note["tone"], Look>> = {
   error: { mark: "✗", color: "red" },
   denied: { mark: "○" },
 };
-
-const cut = (text: string, max: number): string =>
-  text.length > max ? `${text.slice(0, Math.max(1, max - 1))}…` : text;
-
-const detailsOf = (call: ShellCall): readonly string[] => [
-  `$ ${call.command}`,
-  ...call.tail,
-  ...call.stderr.map((line) => `stderr: ${line}`),
-  ...(call.outputPath === undefined ? [] : [`output: ${call.outputPath}`]),
-  ...(call.watchPath === undefined ? [] : [`watch: ${call.watchPath}`]),
-];
 
 /** The view and its handlers, as every row reads them. */
 interface Context {
@@ -101,6 +104,12 @@ const headRowOf = (
   { call, index }: Row,
 ): Readonly<RenderElement> => {
   const { Box, Button, Text } = kit;
+  const state = fit(stateOf(call, view.now), view.columns - HEAD_PREFIX);
+  const room =
+    view.columns -
+    HEAD_PREFIX -
+    state.length -
+    (canStop(call) ? STOP_WIDTH : 0);
   return (
     <Box flexDirection="row" gap={1}>
       <Button
@@ -112,9 +121,9 @@ const headRowOf = (
         }}
       />
       <Text color={COLOR[call.status]}>{GLYPH[call.status]}</Text>
-      <Text dimColor={call.status === "denied"}>{stateOf(call, view.now)}</Text>
+      <Text dimColor={call.status === "denied"}>{state}</Text>
       <Text dimColor={call.status === "denied"} wrap="truncate-end">
-        {nameOf(call)}
+        {fit(oneLine(nameOf(call)), room)}
       </Text>
       {canStop(call) && (
         <Button
@@ -148,7 +157,7 @@ const noteRowOf = (
       dimColor={note.tone !== "error"}
       wrap="truncate-end"
     >
-      {cut(text, view.columns - NOTE_INDENT)}
+      {fit(oneLine(text), view.columns - NOTE_INDENT)}
     </Text>,
   ];
 };
@@ -160,17 +169,24 @@ const rowOf = (
 ): Readonly<RenderElement> => {
   const { Box, Text } = kit;
   const { call } = row;
-  const details = context.view.selected === call.id ? detailsOf(call) : [];
+  const { view } = context;
+  const details = view.selected === call.id ? detailsOf(call) : [];
+  const source = `${sourceOf(call, view.agents)} · ${call.command}`;
   return (
     <Box key={`call:${call.id}`} flexDirection="column">
       {headRowOf(kit, context, row)}
       <Box paddingLeft={NOTE_INDENT} flexDirection="column">
         <Text dimColor wrap="truncate-end">
-          {`${sourceOf(call, context.view.agents)} · ${call.command}`}
+          {fit(oneLine(source), view.columns - NOTE_INDENT)}
         </Text>
-        {noteRowOf(kit, context.view, call)}
+        {noteRowOf(kit, view, call)}
         {details.map((line) => (
-          <Text dimColor wrap="truncate-end">{`  ${line}`}</Text>
+          <Text dimColor wrap="truncate-end">
+            {fit(
+              `  ${line.replaceAll("\t", "  ")}`,
+              view.columns - NOTE_INDENT,
+            )}
+          </Text>
         ))}
       </Box>
     </Box>
@@ -209,7 +225,11 @@ export const paneTree = (
   act: PaneActions,
 ): Readonly<RenderElement> => {
   const { Box, Text } = kit;
-  const shown = view.calls.toReversed();
+  const { shown, hidden } = visibleOf(
+    paneOrder(view.calls),
+    view.selected,
+    view.rows - CHROME_ROWS,
+  );
   const stoppable = shown.filter(
     (call) => call.taskId !== undefined && canStop(call),
   );
@@ -222,8 +242,9 @@ export const paneTree = (
       {shown.map((call, index) =>
         rowOf(kit, { view, act, stopKey }, { call, index }),
       )}
+      {hidden > 0 && <Text dimColor>{`+${String(hidden)} older`}</Text>}
       <Text dimColor wrap="truncate-end">
-        {hint.join(" · ")}
+        {fit(hint.join(" · "), view.columns)}
       </Text>
     </Box>
   );
