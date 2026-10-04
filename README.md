@@ -1,5 +1,10 @@
 # shell-flow
 
+[![ci](https://github.com/apolenkov/claude-shell-flow/actions/workflows/ci.yml/badge.svg)](https://github.com/apolenkov/claude-shell-flow/actions/workflows/ci.yml)
+[![codeql](https://github.com/apolenkov/claude-shell-flow/actions/workflows/codeql.yml/badge.svg)](https://github.com/apolenkov/claude-shell-flow/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/apolenkov/claude-shell-flow/badge)](https://scorecard.dev/viewer/?uri=github.com/apolenkov/claude-shell-flow)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 See at a glance that the work is moving: time ticking, output fresh, nothing
 failed. shell-flow watches this session's Bash calls (main loop and every
 subagent), background tasks, and above all the external agent runs delegated
@@ -62,6 +67,17 @@ running background row stops it with `TaskStop`.
 
 ## Install
 
+This repository is its own marketplace:
+
+```
+/plugin marketplace add apolenkov/claude-shell-flow
+/plugin install shell-flow@claude-shell-flow
+```
+
+It is also listed, with its sibling mods, in the
+[claude-mods](https://github.com/apolenkov/claude-mods) marketplace (an
+existing `shell-flow@claude-mods` install keeps working):
+
 ```
 /plugin marketplace add apolenkov/claude-mods
 /plugin install shell-flow@claude-mods
@@ -112,3 +128,10 @@ event on unchanged.
 No network, no telemetry. It reads only this session's transcript and the
 output and watch files of its own Bash calls, keeps its list in the session's
 memory, and stores one value across sessions: whether the pane was left open.
+
+## Development
+
+See [CONTRIBUTING.md](CONTRIBUTING.md): `npm ci`, then `npm run check`; try it
+live with `claude --plugin-dir .`. Releases are cut by release-please; the
+history before 0.2.0 comes from
+[claude-mods](https://github.com/apolenkov/claude-mods).

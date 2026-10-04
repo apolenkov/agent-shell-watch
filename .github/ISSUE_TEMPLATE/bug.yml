@@ -1,11 +1,7 @@
 name: Bug
-description: Something a mod does wrong
+description: Something shell-flow does wrong
 labels: [bug]
 body:
-  - type: dropdown
-    id: mod
-    attributes: { label: Mod, options: [shell-flow, council] }
-    validations: { required: true }
   - type: input
     id: version
     attributes: { label: Claude Code version, placeholder: "claude --version" }
@@ -18,5 +14,5 @@ body:
     id: debug
     attributes:
       label: Debug log
-      description: Lines naming the mod from `claude --debug` (~/.claude/debug/latest)
+      description: Lines naming shell-flow from `claude --debug` (~/.claude/debug/latest)
       render: text

@@ -16,9 +16,9 @@ import {
   typeDirectiveConfig,
 } from "./eslint/suppressions.ts";
 
-const SOURCE = ["mods/*/hooks/**/*.{ts,tsx}"];
-const MODEL = ["mods/*/hooks/model/**/*.ts"];
-const TESTS = ["mods/*/tests/**/*.{ts,tsx}"];
+const SOURCE = ["hooks/**/*.{ts,tsx}"];
+const MODEL = ["hooks/model/**/*.ts"];
+const TESTS = ["tests/**/*.{ts,tsx}"];
 const TOOLS = ["*.config.ts", "eslint/**/*.ts"];
 
 /** Size and complexity budgets; the suppression guard refuses disabling them. */
@@ -44,8 +44,8 @@ const eslintConfig: Linter.Config[] = defineConfig(
   globalIgnores([
     "node_modules/**",
     "coverage/**",
-    "types/**",
-    "mods/*/.claude-plugin/types/**",
+    "engine-types/**",
+    ".claude-plugin/types/**",
   ]),
   { linterOptions: { reportUnusedDisableDirectives: "error" } },
   js.configs.recommended,

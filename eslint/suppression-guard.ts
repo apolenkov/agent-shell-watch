@@ -11,8 +11,8 @@ import { suppressionConfig, typeDirectiveConfig } from "./suppressions.ts";
 const guardConfig: Linter.Config[] = defineConfig(
   globalIgnores([
     "node_modules/**",
-    "types/**",
-    "mods/*/.claude-plugin/types/**",
+    "engine-types/**",
+    ".claude-plugin/types/**",
   ]),
   {
     files: ["**/*.{ts,tsx}"],

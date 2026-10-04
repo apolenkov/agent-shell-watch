@@ -1,6 +1,7 @@
 # claude-mods design (2026-10-03)
 
-Two Claude Code mods (function hooks, early access, Claude Code 2.1.288+) in one marketplace repo.
+Design of shell-flow (function hooks, early access, Claude Code 2.1.288+). Written when shell-flow and council
+shared the claude-mods repository; council's section now lives in apolenkov/claude-council.
 Owner decisions: backlog TASK-244, decision-104, research doc-235 (OpenCodeReview).
 
 ## Shared conventions
@@ -71,70 +72,6 @@ parse, liveness classification, trimming. Engine: a Bash call through `tool.call
 a background result yields `outputPath`; the poller with `mock.clock` and a mocked `fs.stat` moves
 running → quiet → hung; the status line text; pane render on `terminal` and `desktop`; filter toggle;
 stop presses `TaskStop`.
-
-## council
-
-**Goal.** Independent reviewers in parallel, one summary: agreements, disagreements, unique findings.
-Works for anyone with ≥ 2 reviewer CLIs; uses the owner's limit files when present.
-
-### Members (members.ts)
-
-Adapter `{ name, bin, argv(input) , parse(stdout, stderr, exitCode) → Finding[] | Error }`,
-`Finding { member, path?, line?, severity?, title, detail }`.
-
-- codex: `codex exec review` over the working tree (exact flags from `codex exec review --help`).
-- pi: `pi -p <prompt>`; devin: `devin -p <prompt>` (flags from `--help`). Prompt asks for findings as
-  JSON lines `{"path","line","severity","title","detail"}`; parse tolerantly (fenced blocks, prose
-  fallback → one finding with the raw text).
-- ocr: `ocr review --format json --audience agent`; `comments[]` → findings (no severity in JSON).
-  Not installed on the owner's machine: adapter from doc-235 + a recorded fixture; mark as unverified
-  live.
-- Detection: `$.process.run(['sh','-c','command -v codex pi devin ocr'])`. `userConfig.members`
-  (comma list) overrides order/selection.
-- Limits: `<limitsDir>/<name>` (default `~/.local/state/executor-limits`) holding a future epoch →
-  skipped with "limited until HH:MM". Read only, never written.
-- Single-flight per member; timeout 8 min (`process.run` max is 10). Output streamed into the pane
-  with `$.process.spawn` when available, else `process.run`.
-- < 2 runnable members → say so plainly, run nothing.
-
-### Input
-
-`/council` → the working diff (`git diff HEAD` + untracked files' contents, capped at 200 KB with a
-note). `/council <question>` → the question plus the diff. `/council send` → submit the last summary
-to the model with `$.prompt.submit`. `/council status` → the pane.
-
-### Summary (summarize/)
-
-One interface `summarize(findings, input) → { agreements, disagreements, unique, notes }` where each
-item lists members and the finding text.
-
-- `claude` (default): `$.model.complete` with a strict JSON prompt; parse failure → raw member
-  outputs.
-- `jev` (`userConfig.summarizer = 'jev'` and `TYPESAFE_API_KEY` set): TypeSafe/Jev dedupes (Choice:
-  "same issue as #k / new"), scores noise (probability the finding is a real defect; below
-  `jevThreshold` dropped into notes), flags contradictions within a cluster. Batches respect ≤ 9
-  questions and ≤ 14k chars per request. Claude then writes the prose of each group. Jev's HTTP API
-  per docs.typesafe.ai/api.md; the backend sits behind the same interface (replaceable by a local
-  model, decision-103).
-
-### Auto-review
-
-`turn.complete` of the main loop with `reason: 'answer'`: if `autoReview = 'notify'` (default), the
-diff hash changed since the last review, and `cooldownMin` (10) passed → schedule the council on
-`$.clock.after(0)`; never block the turn. Done → `$.ui.toast` + status `council: N findings` + pane.
-Nothing is sent to the model without the owner (`/council send` or the pane's button).
-
-### Pane
-
-Members with status (waiting/running/done/skipped/failed), elapsed, live output tail; then the
-summary in three sections; buttons `[ send to model ]`, `[ rerun ]`, `[ close ]`.
-
-### Tests
-
-Adapters on recorded outputs (fixtures), detection/limits/single-flight with mocked `process.run`
-and `fs.read`, summary with mocked `model.complete` (valid JSON, broken JSON), Jev with a mocked
-`http.fetch`, auto-review scheduling with `mock.clock` (hash unchanged → nothing; cooldown), pane
-render on terminal and desktop. No network.
 
 ## Revisions after spec review (Fable, 2026-10-04) — these override the sections above
 

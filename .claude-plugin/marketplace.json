@@ -1,0 +1,17 @@
+{
+  "name": "claude-shell-flow",
+  "owner": {
+    "name": "apolenkov",
+    "url": "https://github.com/apolenkov"
+  },
+  "metadata": {
+    "description": "Always-on status line and a pane for this session's Bash calls, background tasks and Codex/Pi/Devin/OpenCodeReview runs: elapsed time, output freshness, verdicts and errors."
+  },
+  "plugins": [
+    {
+      "name": "shell-flow",
+      "source": "./",
+      "description": "Always-on status line and a pane for this session's Bash calls, background tasks and Codex/Pi/Devin/OpenCodeReview runs: elapsed time, output freshness, verdicts and errors."
+    }
+  ]
+}
