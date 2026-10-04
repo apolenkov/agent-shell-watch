@@ -34,10 +34,6 @@ const agentsAtom = atom(
   NO_AGENTS,
 );
 const openAtom = atom({ plugin: "shell-flow", key: "isOpen" } as const, false);
-const selectedAtom = atom(
-  { plugin: "shell-flow", key: "selected" } as const,
-  "",
-);
 
 const TICK_MS = 1000;
 const POLL_MS = 2000;
@@ -98,17 +94,13 @@ const pollCall = async (
 };
 
 const poll = async ($: Engine, config: Config): Promise<void> => {
+  // Live rows are always drawn, so an open pane keeps each one's tail fresh.
   const isOpen = await read($, openAtom);
-  const selected = await read($, selectedAtom);
   const calls = await read($, callsAtom);
   const watched = watchedOf(calls);
   await Promise.all(
     watched.map(async (call) =>
-      pollCall(
-        $,
-        call,
-        call.runner !== undefined || (isOpen && selected === call.id),
-      ),
+      pollCall($, call, call.runner !== undefined || isOpen),
     ),
   );
   const now = await $.clock.now();
