@@ -121,9 +121,9 @@ interface Counted {
 }
 
 const COUNTED: readonly Counted[] = [
-  { status: "hung", lead: "⚠ ", unit: " hung" },
-  { status: "failed", lead: "✗ ", unit: " failed" },
-  { status: "quiet", lead: "⚠ ", unit: " quiet" },
+  { status: "hung", lead: "+", unit: " hung" },
+  { status: "failed", lead: "+", unit: " failed" },
+  { status: "quiet", lead: "+", unit: " quiet" },
   { status: "running", isBackground: true, lead: "+", unit: " bg" },
   { status: "running", isBackground: false, lead: "+", unit: " running" },
 ];

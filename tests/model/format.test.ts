@@ -66,7 +66,7 @@ test("the most urgent leads; the rest are counted", () => {
     }),
   ];
   expect(statusLineOf(calls, 7 * MIN)).toBe(
-    "shell: ✗ Typecheck exit 2 · ⚠ 1 quiet · +2 bg · +1 running",
+    "shell: ✗ Typecheck exit 2 · +1 quiet · +2 bg · +1 running",
   );
   expect(
     statusLineOf(
@@ -86,7 +86,7 @@ test("the rest are counted as +N; a denied call never shows", () => {
     callOf({ id: "d", status: "denied", verdict: "denied", endedAt: 59_000 }),
   ];
   expect(statusLineOf(failed, 60_000)).toBe(
-    "shell: ✗ Run tests exit 1 · ✗ 1 failed",
+    "shell: ✗ Run tests exit 1 · +1 failed",
   );
   expect(statusLineOf(failed, 11 * MIN)).toBeUndefined();
   expect(
@@ -94,7 +94,7 @@ test("the rest are counted as +N; a denied call never shows", () => {
       [callOf({ id: "h", status: "hung", lastOutputAt: 0 }), ...failed],
       60_000,
     ),
-  ).toBe("shell: ⚠ hung 1m Run tests · ✗ 2 failed");
+  ).toBe("shell: ⚠ hung 1m Run tests · +2 failed");
   expect(
     statusLineOf([callOf({ status: "denied", endedAt: 0 })], 1000),
   ).toBeUndefined();

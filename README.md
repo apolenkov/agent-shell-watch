@@ -9,7 +9,8 @@ through the shell: Codex, Pi, Devin and OpenCodeReview (`ocr`).
 
 An always-on status line while anything runs, or a call failed in the last
 2 minutes. The most urgent call leads (hung, failed, quiet, running; a runner
-before a plain shell), the rest are counted:
+before a plain shell), the rest are counted as `+N hung`, `+N failed`,
+`+N quiet`, `+N bg`, `+N running`:
 
 ```
 shell: ◐ codex · Review diff 2:13 · output 4s ago · › applying patch src/a.ts · +1 bg
@@ -35,7 +36,9 @@ shell: ✗ pi · Fix flaky test RATE_LIMIT 1790000000
       stderr: src/a.ts(3,1): error TS2322       stderr, output and watch files
 ```
 
-Glyphs: `◐` running, `●` done, `✗` failed, `⚠` quiet or hung, `○` stopped.
+Glyphs: `◐` running, `●` done, `✗` failed, `⚠` quiet or hung, `○` stopped,
+dim `○ denied` for a call refused before it ran (a permission rule, a hook,
+you), which never reaches the status line.
 A runner's outcome is its guard verdict (`DONE n`, `RATE_LIMIT epoch`,
 `STALLED reason`, `BUSY pid file`), else the exit code. `[ stop ]` on a
 running background row stops it with `TaskStop`.
