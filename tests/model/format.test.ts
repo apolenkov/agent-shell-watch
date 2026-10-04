@@ -78,3 +78,24 @@ test("the most urgent leads; the rest are counted", () => {
     statusLineOf([callOf({ status: "quiet", lastOutputAt: 0 })], 6 * MIN),
   ).toBe("shell: ⚠ quiet 6m Run tests 6:00");
 });
+
+test("the rest are counted as +N; a denied call never shows", () => {
+  const failed = [
+    callOf({ id: "f1", status: "failed", exitCode: 1, endedAt: 50_000 }),
+    callOf({ id: "f2", status: "failed", exitCode: 1, endedAt: 50_000 }),
+    callOf({ id: "d", status: "denied", verdict: "denied", endedAt: 59_000 }),
+  ];
+  expect(statusLineOf(failed, 60_000)).toBe(
+    "shell: ✗ Run tests exit 1 · ✗ 1 failed",
+  );
+  expect(statusLineOf(failed, 11 * MIN)).toBeUndefined();
+  expect(
+    statusLineOf(
+      [callOf({ id: "h", status: "hung", lastOutputAt: 0 }), ...failed],
+      60_000,
+    ),
+  ).toBe("shell: ⚠ hung 1m Run tests · ✗ 2 failed");
+  expect(
+    statusLineOf([callOf({ status: "denied", endedAt: 0 })], 1000),
+  ).toBeUndefined();
+});

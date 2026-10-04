@@ -221,3 +221,29 @@ test("an interrupted call is stopped, not failed", async ($, on) => {
   expect(seen.statuses.at(-1)).toBeUndefined();
   expect(await textOf(await paneOf($, "terminal"))).toContain("○");
 });
+
+test("a refused call is denied: dim in the pane, never on the status line", async ($, on) => {
+  const clock = mock.clock(on);
+  const seen = world(on);
+  on("tool.call", { tool: "Bash" }, (_$, e) =>
+    e.command === "echo test"
+      ? {
+          isError: true,
+          result: undefined,
+          text: "Permission to use Bash has been denied.",
+        }
+      : BG_RESULT,
+  );
+  await $.session.start(START);
+  await $.tool.call({ tool: "Bash", command: "sleep 9", description: "Wait" });
+  await $.tool.call({
+    tool: "Bash",
+    command: "echo test",
+    description: "Echo test",
+  });
+  await clock.advance(1000);
+  expect(seen.statuses.at(-1)).toBe("shell: ◐ Wait 0:01");
+  expect(await textOf(await paneOf($, "terminal"))).toContain(
+    "Echo test  denied",
+  );
+});

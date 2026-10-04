@@ -43,6 +43,7 @@ const COLOR: Readonly<Record<ShellStatus, string>> = {
   done: "green",
   failed: "red",
   stopped: "gray",
+  denied: "gray",
 };
 
 const sourceOf = (call: ShellCall, agents: ShellAgents): string => {

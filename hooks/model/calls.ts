@@ -54,6 +54,7 @@ const RANK: Readonly<Record<ShellStatus, number>> = {
   quiet: 2,
   running: 3,
   stopped: 4,
+  denied: 6,
   done: 5,
 };
 
@@ -153,7 +154,11 @@ const stoppedOrFinished = (
 ): ShellCall =>
   outcome.interrupted === true || outcome.denied !== undefined
     ? {
-        ...ended(call, "stopped", now),
+        ...ended(
+          call,
+          outcome.denied === undefined ? "stopped" : "denied",
+          now,
+        ),
         ...(outcome.denied !== undefined && { verdict: "denied" }),
       }
     : finished(call, outcome, now);

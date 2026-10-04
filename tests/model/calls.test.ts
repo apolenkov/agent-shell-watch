@@ -60,13 +60,14 @@ test("an errored call is failed with the exit code from its text", () => {
   });
 });
 
-test("an interrupted or denied call is stopped", () => {
+test("an interrupted call is stopped, a denied one denied", () => {
   expect(settled(callOf(), { ...OK, interrupted: true }, 9).status).toBe(
     "stopped",
   );
   expect(
     settled(callOf(), { isError: false, text: "", denied: "no" }, 9),
-  ).toMatchObject({ status: "stopped", verdict: "denied" });
+  ).toMatchObject({ status: "denied", verdict: "denied" });
+  expect(isLive(callOf({ status: "denied" }))).toBe(false);
 });
 
 test("a backgrounded call keeps running with its task and output file", () => {
@@ -199,11 +200,7 @@ test("urgency: hung, failed, quiet, running; runners first within a rank", () =>
 });
 
 test("an error without an exit code fails with none invented", () => {
-  const call = settled(
-    callOf(),
-    { isError: true, text: "This command requires approval" },
-    9,
-  );
+  const call = settled(callOf(), { isError: true, text: "boom" }, 9);
   expect(call.status).toBe("failed");
   expect(call.exitCode).toBeUndefined();
 });

@@ -35,10 +35,20 @@ const recordOutcome = (result: unknown, text: string): BashOutcome => {
 // a record with `interrupted: true`.
 const ABORTED = /Command was aborted|Interrupted by user/u;
 
+// A command that ran and failed leads with its exit code; any other error
+// (a permission rule, a settings hook, the person's refusal, an invalid
+// input) means the command never ran.
+const RAN = /^Exit code \d+/u;
+
+const refusedOr = (text: string): BashOutcome =>
+  RAN.test(text)
+    ? { isError: true, text }
+    : { isError: false, text, denied: text };
+
 const erroredOutcome = (text: string): BashOutcome =>
   ABORTED.test(text)
     ? { isError: false, text, interrupted: true }
-    : { isError: true, text };
+    : refusedOr(text);
 
 const answeredOutcome = (ran: Readonly<ToolCallResult>): BashOutcome =>
   ran.isError === true

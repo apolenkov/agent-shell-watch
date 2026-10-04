@@ -1,6 +1,9 @@
-/** Where a call stands: live (running, quiet, hung) or settled. */
+/**
+ * Where a call stands: live (running, quiet, hung) or settled; `denied` never
+ * ran (refused by a permission rule, a hook or the person).
+ */
 export type ShellStatus =
-  "running" | "quiet" | "hung" | "done" | "failed" | "stopped";
+  "running" | "quiet" | "hung" | "done" | "failed" | "stopped" | "denied";
 
 /** An external agent CLI a Bash call runs. */
 export type ShellRunner = "codex" | "pi" | "devin" | "ocr";

@@ -22,6 +22,7 @@ export const GLYPH: Readonly<Record<ShellStatus, string>> = {
   done: "●",
   failed: "✗",
   stopped: "○",
+  denied: "○",
 };
 
 const pad = (n: number): string => String(n).padStart(PAD, "0");
@@ -109,6 +110,7 @@ const SEGMENT: Readonly<
   failed: (call) => `✗ ${nameOf(call)} ${outcomeOf(call)}`.trimEnd(),
   done: (call) => `● ${nameOf(call)}`,
   stopped: (call) => `○ ${nameOf(call)}`,
+  denied: (call) => `○ ${nameOf(call)} denied`,
 };
 
 interface Counted {

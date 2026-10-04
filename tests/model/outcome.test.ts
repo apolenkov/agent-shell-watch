@@ -50,3 +50,26 @@ test("an aborted Bash call is an interruption, not a failure", () => {
     interrupted: true,
   });
 });
+
+test("a refusal before the command ran is a denial", () => {
+  for (const text of [
+    "Permission to use Bash has been denied.",
+    "This command requires approval",
+    "Contains simple_expansion",
+    "<tool_use_error>InputValidationError: command is required</tool_use_error>",
+    "The user doesn't want to proceed with this tool use. The tool use was rejected",
+  ]) {
+    expect(outcomeOf({ isError: true, result: undefined, text })).toEqual({
+      isError: false,
+      text,
+      denied: text,
+    });
+  }
+  expect(
+    outcomeOf({
+      isError: true,
+      result: undefined,
+      text: "Exit code 1\nls: x: Permission denied",
+    }),
+  ).toEqual({ isError: true, text: "Exit code 1\nls: x: Permission denied" });
+});
