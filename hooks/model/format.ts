@@ -23,6 +23,7 @@ export const GLYPH: Readonly<Record<ShellStatus, string>> = {
   failed: "✗",
   stopped: "○",
   denied: "○",
+  nomatch: "○",
 };
 
 const pad = (n: number): string => String(n).padStart(PAD, "0");
@@ -86,6 +87,16 @@ export const outcomeOf = (call: ShellCall): string =>
 const saysOf = (call: ShellCall): string | undefined =>
   call.tail.findLast((line) => line.trim() !== "")?.trim();
 
+/**
+ * How long the call has run, or `—` when its start is unknown (rebuilt from
+ * a transcript that kept no duration).
+ * @param call the call
+ * @param until when to count to: now, or when it ended
+ * @returns the clock text
+ */
+const elapsedOf = (call: ShellCall, until: number): string =>
+  call.isTimeUnknown === true ? "—" : clockOf(until - call.startedAt);
+
 const silentOf = (call: ShellCall, now: number): string =>
   agoOf(now - (call.lastOutputAt ?? call.startedAt));
 
@@ -99,8 +110,11 @@ const isWatched = (call: ShellCall): boolean =>
  * @param now the clock's time
  * @returns the phrase, empty when unknown
  */
-const silenceOf = (call: ShellCall, now: number): string =>
-  isWatched(call) ? `no output · ${agoOf(now - call.startedAt)}` : "";
+const silenceOf = (call: ShellCall, now: number): string => {
+  const since =
+    elapsedOf(call, now) === "—" ? "" : ` · ${agoOf(now - call.startedAt)}`;
+  return isWatched(call) ? `no output${since}` : "";
+};
 
 const freshOf = (call: ShellCall, now: number): string =>
   call.lastOutputAt === undefined
@@ -110,7 +124,7 @@ const freshOf = (call: ShellCall, now: number): string =>
 const runningSegment = (call: ShellCall, now: number): string => {
   const says = saysOf(call);
   return [
-    `◐ ${nameOf(call)} ${clockOf(now - call.startedAt)}`,
+    `◐ ${nameOf(call)} ${elapsedOf(call, now)}`,
     freshOf(call, now),
     ...(says === undefined ? [] : [`› ${cut(says, SAYS_MAX)}`]),
   ]
@@ -126,7 +140,7 @@ const runningSegment = (call: ShellCall, now: number): string => {
  * @returns `0:51 output 1s ago`, `6:00 quiet · output 6m ago`, `0:01 exit 0`
  */
 export const stateOf = (call: ShellCall, now: number): string => {
-  const elapsed = clockOf((call.endedAt ?? now) - call.startedAt);
+  const elapsed = elapsedOf(call, call.endedAt ?? now);
   const live = [
     call.status === "running" ? "" : call.status,
     freshOf(call, now),
@@ -170,12 +184,13 @@ const SEGMENT: Readonly<
 > = {
   running: runningSegment,
   quiet: (call, now) =>
-    `⚠ quiet ${silentOf(call, now)} ${nameOf(call)} ${clockOf(now - call.startedAt)}`,
+    `⚠ quiet ${silentOf(call, now)} ${nameOf(call)} ${elapsedOf(call, now)}`,
   hung: (call, now) => `⚠ hung ${silentOf(call, now)} ${nameOf(call)}`,
   failed: (call) => `✗ ${nameOf(call)} ${outcomeOf(call)}`.trimEnd(),
   done: (call) => `● ${nameOf(call)}`,
   stopped: (call) => `○ ${nameOf(call)}`,
   denied: (call) => `○ ${nameOf(call)} denied`,
+  nomatch: (call) => `○ ${nameOf(call)} no match`,
 };
 
 interface Counted {

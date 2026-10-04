@@ -68,7 +68,10 @@ The pane remembers across sessions whether you left it open.
 
 Glyphs: `◐` running, `●` done, `✗` failed, `⚠` quiet or hung, `○` stopped,
 dim `○ denied` for a call refused before it ran (a permission rule, a hook,
-you), which never reaches the status line.
+you), and dim `○ no match` when a search or test (`grep`, `rg`, `ag`, `ack`,
+`git grep`, `diff`, `test`/`[`, `cmp`, `pgrep`) ends a command with exit 1;
+neither reaches the status line. A call rebuilt from the transcript without
+a duration shows `—` for its time.
 A runner's outcome is its guard verdict (`DONE n`, `RATE_LIMIT epoch`,
 `STALLED reason`, `BUSY pid file`), else the exit code. `[ stop ]` on a
 running background row stops it with `TaskStop`.

@@ -208,3 +208,40 @@ export const agentLabelOf = (
     ? `agent ${id}`
     : `${found.type}: ${found.description}`;
 };
+
+const QUOTED = /'[^']*'|"(?:[^"\\]|\\.)*"/gu;
+const SEARCHES: ReadonlySet<string> = new Set([
+  "grep",
+  "egrep",
+  "fgrep",
+  "rg",
+  "ag",
+  "ack",
+  "diff",
+  "test",
+  "[",
+  "[[",
+  "cmp",
+  "pgrep",
+]);
+
+const programOf = (stage: string): readonly string[] => {
+  const words = stage.trim().split(/\s+/u);
+  const start = words.findIndex((word) => !ASSIGNMENT.test(word));
+  return start === -1 ? [] : words.slice(start);
+};
+
+/**
+ * Whether the command's exit status comes from a search or test tool, whose
+ * exit 1 means "no match" (or "differ", "false"), not a failure: the last
+ * stage of the last pipeline, quoted text ignored.
+ * @param command the Bash command
+ * @returns true for grep, rg, ag, ack, git grep, diff, test, [, [[, cmp, pgrep
+ */
+export const isNoMatchCommand = (command: string): boolean => {
+  const bare = command.replaceAll(QUOTED, "Q");
+  const last = bare.split(/&&|\|\||;/u).at(-1) ?? "";
+  const words = programOf(last.split("|").at(-1) ?? "");
+  const name = words[0]?.split("/").at(-1) ?? "";
+  return SEARCHES.has(name) || (name === "git" && words[1] === "grep");
+};

@@ -15,6 +15,7 @@ const GROUP: Readonly<Record<ShellStatus, number>> = {
   failed: 3,
   done: 4,
   stopped: 4,
+  nomatch: 4,
   denied: 5,
 };
 

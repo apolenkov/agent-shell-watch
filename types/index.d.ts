@@ -3,7 +3,14 @@
  * ran (refused by a permission rule, a hook or the person).
  */
 export type ShellStatus =
-  "running" | "quiet" | "hung" | "done" | "failed" | "stopped" | "denied";
+  | "running"
+  | "quiet"
+  | "hung"
+  | "done"
+  | "failed"
+  | "stopped"
+  | "denied"
+  | "nomatch";
 
 /** An external agent CLI a Bash call runs. */
 export type ShellRunner = "codex" | "pi" | "devin" | "ocr";
@@ -30,6 +37,8 @@ export interface ShellCall {
   readonly status: ShellStatus;
   /** Set when a runner ended in the background: its verdict is still to read. */
   readonly needsTail?: boolean;
+  /** Rebuilt from a transcript with no duration: when it started is unknown. */
+  readonly isTimeUnknown?: boolean;
 }
 
 /** The mod's `userConfig` values, checked and defaulted. */

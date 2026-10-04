@@ -44,6 +44,9 @@ export interface PaneActions {
   readonly stop: (taskId: string) => void;
 }
 
+// Calls that did nothing wrong and nothing worth a look: drawn dim.
+const DIM: ReadonlySet<ShellStatus> = new Set(["denied", "nomatch"]);
+
 const COLOR: Readonly<Record<ShellStatus, string>> = {
   running: "yellow",
   quiet: "yellow",
@@ -52,6 +55,7 @@ const COLOR: Readonly<Record<ShellStatus, string>> = {
   failed: "red",
   stopped: "gray",
   denied: "gray",
+  nomatch: "gray",
 };
 
 const sourceOf = (call: ShellCall, agents: ShellAgents): string => {
@@ -157,8 +161,8 @@ const headRowOf = (
         }}
       />
       <Text color={COLOR[call.status]}>{GLYPH[call.status]}</Text>
-      <Text dimColor={call.status === "denied"}>{state}</Text>
-      <Text dimColor={call.status === "denied"} wrap="truncate-end">
+      <Text dimColor={DIM.has(call.status)}>{state}</Text>
+      <Text dimColor={DIM.has(call.status)} wrap="truncate-end">
         {fit(oneLine(nameOf(call)), room)}
       </Text>
       {stopOf(kit, { act, stopKey }, call)}

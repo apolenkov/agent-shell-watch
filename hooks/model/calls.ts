@@ -5,6 +5,7 @@
 import type { ShellCall, ShellStatus } from "../../types";
 import {
   exitCodeOf,
+  isNoMatchCommand,
   labelOf,
   lastLines,
   outputPathOf,
@@ -57,6 +58,7 @@ const RANK: Readonly<Record<ShellStatus, number>> = {
   stopped: 4,
   denied: 6,
   done: 5,
+  nomatch: 5,
 };
 
 /**
@@ -125,6 +127,22 @@ const ended = (
   now: number,
 ): ShellCall => ({ ...call, status, endedAt: now });
 
+// A search or test tool's exit 1 is "no match" (or "differ", "false").
+const NO_MATCH = 1;
+
+/** How a call ended: its status and exit code, if known. */
+interface Ending {
+  readonly status: ShellStatus;
+  readonly exitCode: number | undefined;
+}
+
+const endedWith = (call: ShellCall, ending: Ending, now: number): ShellCall =>
+  ending.status === "failed" &&
+  ending.exitCode === NO_MATCH &&
+  isNoMatchCommand(call.command)
+    ? { ...ended(call, "nomatch", now), verdict: "no match" }
+    : ended(call, ending.status, now);
+
 const backgrounded = (
   call: ShellCall,
   taskId: string,
@@ -151,7 +169,11 @@ const finished = (
   const verdict = call.runner === undefined ? undefined : verdictOf(lines);
   const exitCode = outcome.isError ? exitCodeOf(outcome.text) : 0;
   return {
-    ...ended(call, outcome.isError ? "failed" : "done", now),
+    ...endedWith(
+      call,
+      { status: outcome.isError ? "failed" : "done", exitCode },
+      now,
+    ),
     ...(exitCode !== undefined && { exitCode }),
     tail: outcome.isError ? call.tail : lines,
     stderr: outcome.isError
@@ -208,7 +230,14 @@ const settledBy = (
   notice: TaskNotice,
   now: number,
 ): ShellCall => ({
-  ...ended(call, NOTICED[notice.status] ?? "stopped", now),
+  ...endedWith(
+    call,
+    {
+      status: NOTICED[notice.status] ?? "stopped",
+      exitCode: notice.exitCode,
+    },
+    now,
+  ),
   ...(notice.exitCode !== undefined && { exitCode: notice.exitCode }),
   ...(call.outputPath !== undefined && { needsTail: true }),
 });

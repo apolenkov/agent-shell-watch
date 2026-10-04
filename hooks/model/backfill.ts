@@ -59,7 +59,10 @@ const callOf = (
     use.isError === true
       ? { isError: true as const, result: use.result, text: use.text ?? "" }
       : { result: use.result, text: use.text ?? "" };
-  return settled(call, outcomeOf(answer), now);
+  const rebuilt = settled(call, outcomeOf(answer), now);
+  return use.durationMs === undefined
+    ? { ...rebuilt, isTimeUnknown: true }
+    : rebuilt;
 };
 
 /**

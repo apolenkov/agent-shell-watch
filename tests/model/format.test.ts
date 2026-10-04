@@ -151,3 +151,37 @@ test("each row's note: last output, a failure's last error, a denial's reason", 
   ).toEqual({ tone: "denied", text: "Permission denied by rule" });
   expect(noteOf(callOf())).toBeUndefined();
 });
+
+test("no match is neutral: never on the status line, dim in the pane", () => {
+  expect(
+    statusLineOf(
+      [
+        callOf({
+          status: "nomatch",
+          exitCode: 1,
+          verdict: "no match",
+          endedAt: 0,
+        }),
+      ],
+      1000,
+    ),
+  ).toBeUndefined();
+  expect(
+    stateOf(
+      callOf({ status: "nomatch", verdict: "no match", endedAt: 2000 }),
+      9e9,
+    ),
+  ).toBe("0:02 no match");
+});
+
+test("an unknown start time reads as —, not 0:00", () => {
+  expect(
+    stateOf(
+      callOf({ status: "done", exitCode: 0, endedAt: 5, isTimeUnknown: true }),
+      9,
+    ),
+  ).toBe("— exit 0");
+  expect(
+    statusLineOf([callOf({ label: "Wait", isTimeUnknown: true })], 5000),
+  ).toBe("◐ Wait —");
+});

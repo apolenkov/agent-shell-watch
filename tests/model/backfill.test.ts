@@ -184,3 +184,9 @@ test("text-only answers, TaskStop and every notification are replayed", () => {
   expect(calls[2]).toMatchObject({ status: "done", taskId: "b8" });
   expect(calls[3]).toMatchObject({ status: "failed", exitCode: 4 });
 });
+
+test("a rebuilt call without a duration has an unknown start time", () => {
+  const calls = backfilled(ROWS, undefined, 10_000);
+  expect(calls[0]?.isTimeUnknown).toBeUndefined();
+  expect(calls[1]?.isTimeUnknown).toBe(true);
+});
