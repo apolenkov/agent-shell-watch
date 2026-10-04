@@ -10,14 +10,15 @@ through the shell: Codex, Pi, Devin and OpenCodeReview (`ocr`).
 An always-on status line while anything runs, or a call failed in the last
 2 minutes. The most urgent call leads (hung, failed, quiet, running; a runner
 before a plain shell), the rest are counted as `+N hung`, `+N failed`,
-`+N quiet`, `+N bg`, `+N running`:
+`+N quiet`, `+N bg`, `+N running`. Claude Code labels it with the plugin's
+name:
 
 ```
-shell: ◐ codex · Review diff 2:13 · output 4s ago · › applying patch src/a.ts · +1 bg
-shell: ⚠ quiet 6m pi · Fix flaky test 7:40 · +2 running
-shell: ⚠ hung 12m devin · Port module
-shell: ✗ Typecheck exit 2 · +1 bg
-shell: ✗ pi · Fix flaky test RATE_LIMIT 1790000000
+shell-flow: ◐ codex · Review diff 2:13 · output 4s ago · › applying patch src/a.ts · +1 bg
+shell-flow: ⚠ quiet 6m pi · Fix flaky test 7:40 · +2 running
+shell-flow: ⚠ hung 12m devin · Port module
+shell-flow: ✗ Typecheck exit 2 · +1 bg
+shell-flow: ✗ pi · Fix flaky test RATE_LIMIT 1790000000
 ```
 
 `/shell-flow` opens the pane: one row per call, newest first. Each row leads
