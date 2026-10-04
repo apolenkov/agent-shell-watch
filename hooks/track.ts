@@ -22,15 +22,15 @@ import { agentLabelOf, noticesOf } from "./model/parse.ts";
 const NO_CALLS: readonly ShellCall[] = [];
 const NO_AGENTS: ShellAgents = {};
 const agentsAtom = atom(
-  { plugin: "shell-flow", key: "agents" } as const,
+  { plugin: "agent-shell-watch", key: "agents" } as const,
   NO_AGENTS,
 );
 const callsAtom = atom(
-  { plugin: "shell-flow", key: "calls" } as const,
+  { plugin: "agent-shell-watch", key: "calls" } as const,
   NO_CALLS,
 );
 const configAtom = atom(
-  { plugin: "shell-flow", key: "config" } as const,
+  { plugin: "agent-shell-watch", key: "config" } as const,
   configOf({}),
 );
 

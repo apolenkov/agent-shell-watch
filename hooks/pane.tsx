@@ -12,28 +12,31 @@ import { paneTree } from "./view/pane.tsx";
 const NO_CALLS: readonly ShellCall[] = [];
 const NO_AGENTS: ShellAgents = {};
 const callsAtom = atom(
-  { plugin: "shell-flow", key: "calls" } as const,
+  { plugin: "agent-shell-watch", key: "calls" } as const,
   NO_CALLS,
 );
 const NO_IDS: readonly string[] = [];
 // The ids `clear` forgot, so a backfill does not bring them back.
 const clearedAtom = atom(
-  { plugin: "shell-flow", key: "cleared" } as const,
+  { plugin: "agent-shell-watch", key: "cleared" } as const,
   NO_IDS,
 );
 
 const agentsAtom = atom(
-  { plugin: "shell-flow", key: "agents" } as const,
+  { plugin: "agent-shell-watch", key: "agents" } as const,
   NO_AGENTS,
 );
-const nowAtom = atom({ plugin: "shell-flow", key: "now" } as const, 0);
-const openAtom = atom({ plugin: "shell-flow", key: "isOpen" } as const, false);
+const nowAtom = atom({ plugin: "agent-shell-watch", key: "now" } as const, 0);
+const openAtom = atom(
+  { plugin: "agent-shell-watch", key: "isOpen" } as const,
+  false,
+);
 const selectedAtom = atom(
-  { plugin: "shell-flow", key: "selected" } as const,
+  { plugin: "agent-shell-watch", key: "selected" } as const,
   "",
 );
 
-const PANE = "shell-flow";
+const PANE = "shell-watch";
 const TAIL_LINES = "40";
 
 type Engine = Readonly<EngineInterface>;
@@ -92,7 +95,7 @@ const close = async ($: Engine): Promise<void> => {
 };
 
 /**
- * `ui.render` of the `shell-flow` pane.
+ * `ui.render` of the `agent-shell-watch` pane.
  * @param $ the engine
  * @param e the pane instance to draw
  * @returns the pane's tree

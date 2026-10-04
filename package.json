@@ -1,5 +1,5 @@
 {
-  "name": "claude-shell-flow",
+  "name": "agent-shell-watch",
   "private": true,
   "type": "module",
   "scripts": {

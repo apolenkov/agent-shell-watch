@@ -7,7 +7,7 @@ npm ci            # installs tooling and the git hooks (lefthook)
 npm run check     # format, typecheck, lint, repo lint, validate, tests
 ```
 
-shell-flow needs Claude Code 2.1.287+ (mods are on by default). Try it live with
+agent-shell-watch needs Claude Code 2.1.287+ (mods are on by default). Try it live with
 `claude --plugin-dir .` from the repository root.
 
 ## Rules of the house
@@ -20,7 +20,7 @@ shell-flow needs Claude Code 2.1.287+ (mods are on by default). Try it live with
 - Every behaviour has a test under `tests/`, named for the file it covers, run by
   `claude plugin test`. No network in tests.
 - [Conventional Commits](https://www.conventionalcommits.org) with a scope:
-  `shell-flow`, `repo`, `deps`, `ci`. Releases are cut by release-please.
+  `agent-shell-watch`, `repo`, `deps`, `ci`. Releases are cut by release-please.
 - After a Claude Code update: `npm run update-types`, then `npm run check`.
 
 `npm run lint` lints the pure model in its own ESLint process: eslint-plugin-functional

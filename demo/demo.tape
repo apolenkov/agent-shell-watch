@@ -1,5 +1,5 @@
 # Records demo/demo.gif: `vhs demo/demo.tape` from the repository root.
-# Needs Claude Code 2.1.287+ with shell-flow installed.
+# Needs Claude Code 2.1.287+ with agent-shell-watch installed.
 # demo/bin/codex and demo/bin/tsc are stand-ins so the recording is free and
 # repeatable. Run from a trusted, empty project at /tmp/my-app. The recorded
 # session loads no personal instructions (agents-md managed-only), no status
@@ -20,7 +20,7 @@ Set TypingSpeed 25ms
 Hide
 Type `unset CLAUDE_CODE_CHILD_SESSION CLAUDECODE; export PATH="$PWD/demo/bin:$PATH"; cd /tmp/my-app; clear`
 Enter
-Type `claude --settings '{"statusLine":{"type":"command","command":"true"},"enabledPlugins":{"council@claude-mods":false},"pluginConfigs":{"agents-md@builtin":{"options":{"instructionFiles":"managed-only"}}}}'`
+Type `claude --settings '{"statusLine":{"type":"command","command":"true"},"enabledPlugins":{"council@agent-watch":false},"pluginConfigs":{"agents-md@builtin":{"options":{"instructionFiles":"managed-only"}}}}'`
 Enter
 Sleep 8s
 Show
@@ -30,7 +30,7 @@ Sleep 500ms
 Enter
 Sleep 14s
 
-Type "/shell-flow"
+Type "/shell-watch"
 Sleep 400ms
 Enter
 Sleep 4s

@@ -69,7 +69,7 @@ for (const surface of SURFACES) {
   });
 }
 
-test("an empty pane says so; /shell-flow opens it and stop closes it", async ($, on) => {
+test("an empty pane says so; /shell-watch opens it and stop closes it", async ($, on) => {
   mock.clock(on);
   const seen = world(on);
   await $.session.start(START);
@@ -79,25 +79,25 @@ test("an empty pane says so; /shell-flow opens it and stop closes it", async ($,
   const presentation = { isFullscreen: true, columns: 160 };
   const origin = { kind: "composer" } as const;
   await $.command.run({
-    command: "shell-flow",
+    command: "shell-watch",
     args: "",
     origin,
     presentation,
   });
-  expect(seen.opened).toEqual(["shell-flow"]);
+  expect(seen.opened).toEqual(["shell-watch"]);
   const again = await $.command.run({
-    command: "shell-flow",
+    command: "shell-watch",
     args: "",
     origin,
     presentation,
   });
   expect(again).toMatchObject({
-    text: "keys on the pane · Esc → prompt · /shell-flow again refocuses",
+    text: "keys on the pane · Esc → prompt · /shell-watch again refocuses",
   });
-  expect(seen.opened).toEqual(["shell-flow", "shell-flow"]);
+  expect(seen.opened).toEqual(["shell-watch", "shell-watch"]);
   expect(seen.focused).toEqual([true, true]);
   const closed = await $.command.run({
-    command: "shell-flow",
+    command: "shell-watch",
     args: "stop",
     origin,
     presentation,

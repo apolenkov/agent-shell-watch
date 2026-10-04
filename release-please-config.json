@@ -5,7 +5,7 @@
   "bump-minor-pre-major": true,
   "packages": {
     ".": {
-      "package-name": "shell-flow",
+      "package-name": "agent-shell-watch",
       "extra-files": [
         {
           "type": "json",

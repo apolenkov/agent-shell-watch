@@ -7,7 +7,7 @@ import { world } from "../fixtures/world.ts";
 
 const START = { cwd: "/w", surface: "terminal", isInteractive: true } as const;
 const RUN = {
-  command: "shell-flow",
+  command: "shell-watch",
   args: "",
   origin: { kind: "composer" },
   presentation: { isFullscreen: false, columns: 120 },
@@ -77,7 +77,7 @@ for (const surface of ["terminal", "desktop"] as const) {
   });
 }
 
-test("/shell-flow asks for the height its rows need", async ($, on) => {
+test("/shell-watch asks for the height its rows need", async ($, on) => {
   const seen = await withRunner($, on);
   await $.command.run(RUN);
   // toolbar and hint 2 + runner 3 (head, source, note) + three done rows,

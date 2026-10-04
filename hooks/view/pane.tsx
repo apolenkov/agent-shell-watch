@@ -72,7 +72,7 @@ const HOTKEYS = 9;
 // The terminal does not draw a bracketed Button's hotkey, so each label
 // carries its own key: [ 1 ▸ ], [ c clear ], [ q close ], [ s stop ].
 const HINT_FOCUSED = "1–9 open · c clear · q close · Esc → prompt";
-const HINT_UNFOCUSED = "/shell-flow → keys";
+const HINT_UNFOCUSED = "/shell-watch → keys";
 
 /** How a note's tone draws: its mark, and a color for errors. */
 interface Look {

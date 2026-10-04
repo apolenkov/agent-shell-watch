@@ -1,5 +1,5 @@
 /**
- * shell-flow: an always-on status line and a pane for this session's Bash
+ * agent-shell-watch: an always-on status line and a pane for this session's Bash
  * calls, background tasks and runner (Codex, Pi, Devin, OpenCodeReview) runs.
  * Every hook observes and passes its event on unchanged. The poller lives
  * here: the engine follows `$` only into functions of the same file.
@@ -22,26 +22,29 @@ import { onAppend, onToolCall } from "./track.ts";
 const NO_CALLS: readonly ShellCall[] = [];
 const NO_AGENTS: ShellAgents = {};
 const callsAtom = atom(
-  { plugin: "shell-flow", key: "calls" } as const,
+  { plugin: "agent-shell-watch", key: "calls" } as const,
   NO_CALLS,
 );
 const NO_IDS: readonly string[] = [];
 // The ids `clear` forgot, so a backfill does not bring them back.
 const clearedAtom = atom(
-  { plugin: "shell-flow", key: "cleared" } as const,
+  { plugin: "agent-shell-watch", key: "cleared" } as const,
   NO_IDS,
 );
 
 const configAtom = atom(
-  { plugin: "shell-flow", key: "config" } as const,
+  { plugin: "agent-shell-watch", key: "config" } as const,
   configOf({}),
 );
-const nowAtom = atom({ plugin: "shell-flow", key: "now" } as const, 0);
+const nowAtom = atom({ plugin: "agent-shell-watch", key: "now" } as const, 0);
 const agentsAtom = atom(
-  { plugin: "shell-flow", key: "agents" } as const,
+  { plugin: "agent-shell-watch", key: "agents" } as const,
   NO_AGENTS,
 );
-const openAtom = atom({ plugin: "shell-flow", key: "isOpen" } as const, false);
+const openAtom = atom(
+  { plugin: "agent-shell-watch", key: "isOpen" } as const,
+  false,
+);
 
 const TICK_MS = 1000;
 const POLL_MS = 2000;
@@ -128,7 +131,12 @@ const restore = async ($: Engine, config: Config): Promise<void> => {
     return;
   }
   const rows = rowsWantedOf(await read($, callsAtom));
-  await $.ui.open({ id: PANE, title: "shell", columns: config.columns, rows });
+  await $.ui.open({
+    id: PANE,
+    title: "shell-watch",
+    columns: config.columns,
+    rows,
+  });
   await update($, openAtom, () => true);
 };
 
@@ -183,7 +191,7 @@ const backfill = async ($: Engine, config: Config): Promise<void> => {
 };
 
 /**
- * Wires shell-flow's hooks.
+ * Wires agent-shell-watch's hooks.
  * @param on the registrar
  * @param options the `userConfig` values
  */
@@ -213,7 +221,7 @@ export const register: Register = (on, options) => {
   });
   on("tool.call", onToolCall);
   on("session.append", onAppend);
-  on("command.run", { command: "shell-flow" }, onCommand);
+  on("command.run", { command: "shell-watch" }, onCommand);
   on("ui.close", onClose);
   // Opening the pane (the command, a restore) picks up what was missed.
   on("ui.open", async ($, e, next) => {
@@ -222,5 +230,5 @@ export const register: Register = (on, options) => {
     }
     return next(e);
   });
-  on("ui.render", { component: "Pane", requestId: "shell-flow" }, onRender);
+  on("ui.render", { component: "Pane", requestId: "shell-watch" }, onRender);
 };

@@ -1,5 +1,5 @@
 /**
- * `/shell-flow` (`clear`, `stop`) and the pane's closing by the person.
+ * `/shell-watch` (`clear`, `stop`) and the pane's closing by the person.
  */
 import type {
   CommandRunInput,
@@ -18,28 +18,31 @@ import { rowsWantedOf } from "./model/layout.ts";
 
 const NO_CALLS: readonly ShellCall[] = [];
 const callsAtom = atom(
-  { plugin: "shell-flow", key: "calls" } as const,
+  { plugin: "agent-shell-watch", key: "calls" } as const,
   NO_CALLS,
 );
 const NO_IDS: readonly string[] = [];
 // The ids `clear` forgot, so a backfill does not bring them back.
 const clearedAtom = atom(
-  { plugin: "shell-flow", key: "cleared" } as const,
+  { plugin: "agent-shell-watch", key: "cleared" } as const,
   NO_IDS,
 );
 
 const configAtom = atom(
-  { plugin: "shell-flow", key: "config" } as const,
+  { plugin: "agent-shell-watch", key: "config" } as const,
   configOf({}),
 );
-const openAtom = atom({ plugin: "shell-flow", key: "isOpen" } as const, false);
+const openAtom = atom(
+  { plugin: "agent-shell-watch", key: "isOpen" } as const,
+  false,
+);
 const selectedAtom = atom(
-  { plugin: "shell-flow", key: "selected" } as const,
+  { plugin: "agent-shell-watch", key: "selected" } as const,
   "",
 );
 
 /** The pane's id and the command's name. */
-export const PANE = "shell-flow";
+export const PANE = "shell-watch";
 
 // ponytail: the cleared ids list is capped; a transcript keeps 4096 entries.
 const CLEARED_MAX = 4096;
@@ -53,7 +56,7 @@ const clearCalls = async ($: Readonly<EngineInterface>): Promise<void> => {
 };
 
 /**
- * `command.run` for `/shell-flow`: opens the pane, `clear` forgets finished
+ * `command.run` for `/shell-watch`: opens the pane, `clear` forgets finished
  * calls, `stop` closes the pane.
  * @param $ the engine
  * @param e the command
@@ -79,7 +82,7 @@ export const onCommand = async (
   const rows = rowsWantedOf(await read($, callsAtom));
   const opened = await $.ui.open({
     id: PANE,
-    title: "shell",
+    title: "shell-watch",
     columns,
     rows,
     focus: true,
@@ -88,7 +91,7 @@ export const onCommand = async (
   await $.store.set("paneOpen", true);
   return {
     text: opened.isPlaced
-      ? "keys on the pane · Esc → prompt · /shell-flow again refocuses"
+      ? "keys on the pane · Esc → prompt · /shell-watch again refocuses"
       : "the pane waits for room",
   };
 };

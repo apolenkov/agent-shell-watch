@@ -7,7 +7,7 @@ import { world } from "../fixtures/world.ts";
 
 const START = { cwd: "/w", surface: "terminal", isInteractive: true } as const;
 const RUN = {
-  command: "shell-flow",
+  command: "shell-watch",
   args: "",
   origin: { kind: "composer" },
   presentation: { isFullscreen: true, columns: 160 },

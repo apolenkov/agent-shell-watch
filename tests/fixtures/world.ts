@@ -17,7 +17,7 @@ export interface World {
 }
 
 /**
- * Answers every engine call shell-flow makes besides Bash and the clock:
+ * Answers every engine call agent-shell-watch makes besides Bash and the clock:
  * session start, the store, commands, status line, panes, agents, stat,
  * tail, TaskStop.
  * @param on the test's registrar

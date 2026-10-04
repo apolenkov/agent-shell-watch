@@ -17,6 +17,6 @@ for (const surface of SURFACES) {
       isFocused: false,
     });
     const found = await pane.findAll({ type: "Text" });
-    expect(found.map((text) => text.text)).toContain("/shell-flow → keys");
+    expect(found.map((text) => text.text)).toContain("/shell-watch → keys");
   });
 }

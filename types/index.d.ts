@@ -46,7 +46,7 @@ export type ShellAgents = Readonly<Record<string, string>>;
 
 declare module "claude-code" {
   interface PluginState {
-    "shell-flow": {
+    "agent-shell-watch": {
       config: ShellConfig;
       calls: readonly ShellCall[];
       agents: ShellAgents;
