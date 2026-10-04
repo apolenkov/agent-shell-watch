@@ -1,6 +1,6 @@
 {
   "name": "shell-flow",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Always-on status line and a pane for this session's Bash calls, background tasks and Codex/Pi/Devin/OpenCodeReview runs: elapsed time, output freshness, verdicts and errors.",
   "author": {
     "name": "apolenkov",
