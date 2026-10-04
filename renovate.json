@@ -7,12 +7,15 @@
   ],
   "rangeStrategy": "pin",
   "minimumReleaseAge": "3 days",
-  "lockFileMaintenance": { "enabled": true },
+  "lockFileMaintenance": {
+    "enabled": true
+  },
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch"],
       "matchCurrentVersion": "!/^0/",
       "groupName": "non-major tooling"
     }
-  ]
+  ],
+  "dependencyDashboard": true
 }
