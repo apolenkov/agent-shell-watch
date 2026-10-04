@@ -14,6 +14,7 @@ import { atom, read, update } from "claude-code";
 import type { ShellCall } from "../types";
 import { finishedIds, liveOnly } from "./model/calls.ts";
 import { configOf } from "./model/config.ts";
+import { rowsWantedOf } from "./model/layout.ts";
 
 const NO_CALLS: readonly ShellCall[] = [];
 const callsAtom = atom(
@@ -75,10 +76,12 @@ export const onCommand = async (
     return { text: "finished calls cleared" };
   }
   const { columns } = await read($, configAtom);
+  const rows = rowsWantedOf(await read($, callsAtom));
   const opened = await $.ui.open({
     id: PANE,
     title: "shell",
     columns,
+    rows,
     focus: true,
   });
   await update($, openAtom, () => true);

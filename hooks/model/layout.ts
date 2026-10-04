@@ -100,8 +100,17 @@ const baseOf = (call: ShellCall): number =>
 const isKept = (call: ShellCall, selected: string): boolean =>
   isLive(call) || call.status === "failed" || call.id === selected;
 
+/**
+ * Whether a compact row still draws its note: a live runner's last line is
+ * what the pane is for, so it stays.
+ * @param call the call
+ * @returns true when the note stays
+ */
+export const isNoteKept = (call: ShellCall): boolean =>
+  call.runner !== undefined && isLive(call) && noteOf(call) !== undefined;
+
 const compactLinesOf = (call: ShellCall, selected: string): number =>
-  call.id === selected ? baseOf(call) + 1 : 1;
+  call.id === selected ? baseOf(call) + 1 : 1 + Number(isNoteKept(call));
 
 const prefixFit = (lines: readonly number[], room: number): number =>
   lines.filter((_, index) => sumOf(lines.slice(0, index + 1)) <= room).length;
@@ -126,7 +135,9 @@ const compactOf = (
   );
   const hidden = ordered.length - shown.length;
   const others = sumOf(
-    shown.filter((call) => call.id !== selected).map(() => 1),
+    shown
+      .filter((call) => call.id !== selected)
+      .map((call) => compactLinesOf(call, selected)),
   );
   const chosen = shown.find((call) => call.id === selected);
   const detailRoom =
@@ -174,4 +185,19 @@ export const tailFit = (
   const newest = count === 0 ? [] : lines.slice(-count);
   const cut = [`… ${String(lines.length - count)} earlier lines`, ...newest];
   return lines.length <= room ? lines : cut.slice(0, Math.max(0, room));
+};
+
+const CHROME = 2;
+const ROWS_MIN = 6;
+const ROWS_MAX = 30;
+
+/**
+ * The body rows to ask for when the pane opens inline: every row in full,
+ * with the toolbar and the hint, at least 6 and at most 30.
+ * @param calls the list
+ * @returns the rows
+ */
+export const rowsWantedOf = (calls: readonly ShellCall[]): number => {
+  const full = CHROME + sumOf(calls.map((call) => rowsOf(call, "")));
+  return Math.min(ROWS_MAX, Math.max(ROWS_MIN, full));
 };

@@ -11,6 +11,7 @@ import { GLYPH, nameOf, type Note, noteOf, stateOf } from "../model/format.ts";
 import {
   detailsOf,
   fit,
+  isNoteKept,
   oneLine,
   paneOrder,
   tailFit,
@@ -197,7 +198,7 @@ const bodyOf = (
   const width = view.columns - NOTE_INDENT;
   const isSelected = view.selected === call.id;
   if (!isSelected && room.isCompact) {
-    return [];
+    return isNoteKept(call) ? noteRowOf(kit, view, call) : [];
   }
   const source = `${sourceOf(call, view.agents)} · ${call.command}`;
   const details = isSelected ? tailFit(detailsOf(call), room.detailRoom) : [];

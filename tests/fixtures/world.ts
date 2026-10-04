@@ -10,6 +10,8 @@ export interface World {
   readonly opened: string[];
   /** Whether each `$.ui.open` asked for the keyboard (`focus`). */
   readonly focused: boolean[];
+  /** The `rows` each `$.ui.open` asked for (undefined when none). */
+  readonly rows: (number | undefined)[];
   /** What `$.session.messages()` answers, by agent id ("" for the main loop). */
   readonly transcripts: Map<string, unknown[]>;
 }
@@ -36,6 +38,7 @@ export const world = (
     stops: [],
     opened: [],
     focused: [],
+    rows: [],
     transcripts: new Map(),
   };
   on("session.start", (_$, e) => ({ cwd: e.cwd }));
@@ -47,6 +50,7 @@ export const world = (
   on("ui.open", (_$, e) => {
     seen.opened.push(e.id);
     seen.focused.push(e.focus === true);
+    seen.rows.push(e.rows);
     return { value: { isPlaced: true } };
   });
   on("ui.close", () => ({ value: undefined }));

@@ -30,7 +30,9 @@ shell-flow: ✗ pi · Fix flaky test RATE_LIMIT 1790000000
 `/shell-flow` opens the pane. Live calls come first (hung, quiet, running),
 then failures, finished calls and denied ones, the newest first in each; what
 does not fit the pane's height becomes a dim `+N older` line, so the newest
-and live rows never need scrolling. Each row is three lines: state before the
+and live rows never need scrolling. Opened above the prompt, the pane asks for
+the rows its calls need (6 to 30); short of room, rows shrink to one line, but
+a running runner keeps its last output line. Each row is three lines: state before the
 label (a narrow pane cuts the label, never the time or outcome), where it ran
 and its command, and its last output line (a failure's last error in red, a
 denial's reason, dim). Every line is one line, cut to the pane's width.

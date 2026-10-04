@@ -12,6 +12,7 @@ import { backfilled, merged, type MessageRow } from "./model/backfill.ts";
 import { classified, hasLive, polled, tailed } from "./model/calls.ts";
 import { type Config, configOf } from "./model/config.ts";
 import { statusLineOf } from "./model/format.ts";
+import { rowsWantedOf } from "./model/layout.ts";
 import { agentLabelOf } from "./model/parse.ts";
 import { isTailDue, tailPathOf, watchedOf } from "./model/poll.ts";
 import { onRender } from "./pane.tsx";
@@ -126,7 +127,8 @@ const restore = async ($: Engine, config: Config): Promise<void> => {
   if (!isOpen) {
     return;
   }
-  await $.ui.open({ id: PANE, title: "shell", columns: config.columns });
+  const rows = rowsWantedOf(await read($, callsAtom));
+  await $.ui.open({ id: PANE, title: "shell", columns: config.columns, rows });
   await update($, openAtom, () => true);
 };
 
