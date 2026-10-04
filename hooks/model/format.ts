@@ -83,7 +83,7 @@ export const outcomeOf = (call: ShellCall): string =>
  * @param call the call
  * @returns the line, or undefined
  */
-export const saysOf = (call: ShellCall): string | undefined =>
+const saysOf = (call: ShellCall): string | undefined =>
   call.tail.findLast((line) => line.trim() !== "")?.trim();
 
 const silentOf = (call: ShellCall, now: number): string =>

@@ -16,28 +16,40 @@ name:
 ```
 shell-flow: ◐ codex · Review diff 2:13 · output 4s ago · › applying patch src/a.ts · +1 bg
 shell-flow: ⚠ quiet 6m pi · Fix flaky test 7:40 · +2 running
+shell-flow: ◐ Wait 0:45 · no output · 45s
 shell-flow: ⚠ hung 12m devin · Port module
 shell-flow: ✗ Typecheck exit 2 · +1 bg
 shell-flow: ✗ pi · Fix flaky test RATE_LIMIT 1790000000
 ```
 
-`/shell-flow` opens the pane: one row per call, newest first. Each row leads
-with `[ ▸ ]`: click it, or Tab to it (after ctrl+x tab) and press Enter, to
-expand the row.
+`/shell-flow` opens the pane. Live calls come first (hung, quiet, running),
+then failures, finished calls and denied ones, the newest first in each; what
+does not fit the pane's height becomes a dim `+N older` line, so the newest
+and live rows never need scrolling. Each row is three lines: state before the
+label (a narrow pane cuts the label, never the time or outcome), where it ran
+and its command, and its last output line (a failure's last error in red, a
+denial's reason, dim). Every line is one line, cut to the pane's width.
 
 ```
-[ background only ]  [ clear ]  [ close ]
-[ ▸ ] ◐ 2:13  codex · Review diff  output 4s ago    [ stop ]
-    bg · codex-runner: Review diff · node watchdog.ts --watch-file … -- codex exec …
-    › applying patch src/a.ts
-[ ▸ ] ● 0:07  Run unit tests  exit 0
-    main · npm test
-[ ▾ ] ✗ 0:03  Typecheck  exit 2
-    main · tsc -p .
-      $ tsc -p .                              ← a selected row expands:
-      stderr: Exit code 2                       full command, last 40 lines,
-      stderr: src/a.ts(3,1): error TS2322       stderr, output and watch files
+[ c clear ] [ q close ]
+[1 ▸] ◐ 0:51 output 1s ago  Count steps  [ s stop ]
+      bg · main · for i in $(seq 40); do echo step $i; sleep 2; done
+      › step 26
+[2 ▸] ✗ 0:03 exit 2  Typecheck
+      main · tsc -p .
+      ✗ src/a.ts(3,1): error TS2322: Type 'string' is not assignable…
+[3 ▸] ● 0:01 exit 0  List files
+      main · ls -1 | head -3
+      › README.md
++4 older
+ctrl+x tab focus · 1–9 expand · c clear · s stop · q close
 ```
+
+Keys, once the pane holds the keyboard (ctrl+x tab, or a click): `1`–`9`
+expand or collapse that row (the full command, last 40 lines, stderr, output
+and watch files), `c` clear finished calls, `s` stop the running background
+call (when there is one), `q` close. Tab walks the buttons, Enter presses.
+The pane remembers across sessions whether you left it open.
 
 Glyphs: `◐` running, `●` done, `✗` failed, `⚠` quiet or hung, `○` stopped,
 dim `○ denied` for a call refused before it ran (a permission rule, a hook,
@@ -61,7 +73,7 @@ Requirements: Claude Code 2.1.288 or later with function hooks enabled
 | Option        | Default | Meaning                                                   |
 | ------------- | ------- | --------------------------------------------------------- |
 | `columns`     | 52      | Width asked for the docked pane                           |
-| `openOnStart` | false   | Open the pane when the session starts                     |
+| `openOnStart` | false   | Open the pane at start until you have opened or closed it |
 | `maxCalls`    | 50      | Calls kept, the oldest finished dropped first             |
 | `quietMin`    | 5       | Minutes without new output before a running call is quiet |
 | `hangMin`     | 10      | Minutes without new output before a running call is hung  |
@@ -73,18 +85,20 @@ Requirements: Claude Code 2.1.288 or later with function hooks enabled
 
 | Event / timer             | What shell-flow does                                                                         |
 | ------------------------- | -------------------------------------------------------------------------------------------- |
-| `session.start`           | Registers `/shell-flow`, starts the 1 s tick and 2 s poll (again after a hot reload)         |
+| `session.start`           | Registers `/shell-flow`, rebuilds calls made before the mod loaded, starts the tick and poll |
 | `tool.call` (Bash)        | Records the call (label from the input `description`), awaits it, records exit and output    |
 | `session.append`          | A `<task-notification>` row settles its background call (status, exit code)                  |
 | tick, every 1 s           | Advances elapsed time and redraws the status line                                            |
 | poll, every 2 s           | `fs.stat` of the watch or output file → freshness, quiet, hung; `tail -n 40` for runner rows |
 | `ui.render` (Pane)        | Draws the pane; the selected row's tail is read once when it is selected                     |
-| `ui.close`, `command.run` | Opens and closes the pane                                                                    |
+| `ui.open`                 | Rebuilds missed calls from `$.session.messages()` (main loop and running agents)             |
+| `ui.close`, `command.run` | Opens and closes the pane; the choice is kept in `$.store` for the next session              |
 
 A runner is a command whose executable (past `NAME=value` and `cd … &&`,
 after a guard's `--`, or inside `bash -c '…'` / `sh -c "…"`) is `codex`,
-`pi`, `devin` or `ocr`. Its live output is the guard's `--watch-file`, or its
-own absolute stdout redirect (`> /path/run.log`); the guard's verdict is read
+`pi`, `devin` or `ocr`. Its live output is the guard's `--watch-file`, its
+`| tee [-a] /path`, or its absolute stdout redirect (`> /path/run.log`); with
+no description its label is the first words of its prompt. The verdict is read
 from the Bash output once the run ends. shell-flow sees the command as the
 model wrote it, before a `PreToolUse` settings hook wraps it, and recognises
 both forms. A `TaskStop` (the model's or the pane's) settles its call as
@@ -93,5 +107,6 @@ event on unchanged.
 
 ## Privacy
 
-No network, no telemetry. It reads only the output and watch files of this
-session's own Bash calls, and keeps its list in the session's memory.
+No network, no telemetry. It reads only this session's transcript and the
+output and watch files of its own Bash calls, keeps its list in the session's
+memory, and stores one value across sessions: whether the pane was left open.
