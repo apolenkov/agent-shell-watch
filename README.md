@@ -20,16 +20,18 @@ shell: ✗ Typecheck exit 2 · +1 bg
 shell: ✗ pi · Fix flaky test RATE_LIMIT 1790000000
 ```
 
-`/shell-flow` opens the pane: one row per call, newest first.
+`/shell-flow` opens the pane: one row per call, newest first. Each row leads
+with `[ ▸ ]`: click it, or Tab to it (after ctrl+x tab) and press Enter, to
+expand the row.
 
 ```
 [ background only ]  [ clear ]  [ close ]
-◐ 2:13  codex · Review diff  output 4s ago          [ stop ]
+[ ▸ ] ◐ 2:13  codex · Review diff  output 4s ago    [ stop ]
     bg · codex-runner: Review diff · node watchdog.ts --watch-file … -- codex exec …
     › applying patch src/a.ts
-● 0:07  Run unit tests  exit 0
+[ ▸ ] ● 0:07  Run unit tests  exit 0
     main · npm test
-✗ 0:03  Typecheck  exit 2
+[ ▾ ] ✗ 0:03  Typecheck  exit 2
     main · tsc -p .
       $ tsc -p .                              ← a selected row expands:
       stderr: Exit code 2                       full command, last 40 lines,

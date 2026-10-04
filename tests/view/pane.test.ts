@@ -93,3 +93,27 @@ test("an empty pane says so; /shell-flow opens it and stop closes it", async ($,
   });
   expect(closed).toMatchObject({ text: "shell-flow closed" });
 });
+
+for (const surface of SURFACES) {
+  test(`${surface}: each row has a focusable toggle that expands it`, async ($, on) => {
+    mock.clock(on);
+    world(on);
+    on("tool.call", { tool: "Bash" }, () => ({
+      result: { stdout: "ok\n", stderr: "", interrupted: false },
+      text: "ok",
+    }));
+    await $.session.start(START);
+    await $.tool.call({ tool: "Bash", command: "ls -la", description: "List" });
+    const pane = await paneOf($, surface);
+    const buttons = await pane.findAll({ type: "Button" });
+    const toggle = buttons.find(
+      (button) => button.key?.startsWith("row:") === true,
+    );
+    expect(toggle?.text).toBe("▸");
+    expect(toggle?.props["plain"]).toBeUndefined();
+    await pane.press({ key: toggle?.key ?? "" });
+    const expanded = await pane.find({ key: toggle?.key ?? "" });
+    expect(expanded?.text).toBe("▾");
+    expect(await textOf(pane)).toContain("$ ls -la");
+  });
+}

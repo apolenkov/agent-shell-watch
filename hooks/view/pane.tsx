@@ -1,6 +1,7 @@
 /**
  * The pane's tree: filter and housekeeping buttons, then one row per call,
  * newest first, a selected row expanded to its command, tail and stderr.
+ * Each row leads with a `[ ▸ ]` Button, so Tab reaches it and Enter expands.
  */
 import type { Elements, RenderElement } from "claude-code";
 
@@ -91,15 +92,17 @@ const headRowOf = (
   const canStop = call.background && isLive(call) && call.taskId !== undefined;
   return (
     <Box flexDirection="row" gap={1}>
-      <Text color={COLOR[call.status]}>{GLYPH[call.status]}</Text>
       <Button
         key={`row:${call.id}`}
-        plain
-        label={headOf(call, view.now)}
+        label={view.selected === call.id ? "▾" : "▸"}
         onPress={() => {
           act.select(call.id);
         }}
       />
+      <Text color={COLOR[call.status]}>{GLYPH[call.status]}</Text>
+      <Text dimColor={call.status === "denied"} wrap="truncate-end">
+        {headOf(call, view.now)}
+      </Text>
       {canStop && (
         <Button
           key={`stop:${call.id}`}
