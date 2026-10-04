@@ -41,7 +41,7 @@ test("a Bash call shows while it runs and settles with its exit", async ($, on) 
   await clock.advance(1000);
   expect(seen.statuses.at(-1)).toBeUndefined();
   expect(await textOf(await paneOf($, "terminal"))).toContain(
-    "0:05  Run tests  exit 0",
+    "0:05 exit 0\nRun tests",
   );
 });
 
@@ -79,7 +79,7 @@ test("a background run keeps running until its notification", async ($, on) => {
   await notify($, NOTICE);
   await clock.advance(1000);
   expect(seen.statuses.at(-1)).toBe("✗ E2E exit 3");
-  expect(await textOf(pane)).toContain("E2E  exit 3");
+  expect(await textOf(pane)).toContain("0:01 exit 3\nE2E");
 });
 
 test("the poller moves a silent run to quiet, then hung", async ($, on) => {
@@ -120,7 +120,7 @@ test("a missing watch file is silence from the start, not a failure", async ($, 
   expect(seen.statuses).toContain("◐ codex · Review 2:00 · no output · 2m");
   expect(seen.statuses).toContain("⚠ quiet 6m codex · Review 6:00");
   expect(await textOf(await paneOf($, "terminal"))).toContain(
-    "6:00  codex · Review  DONE 0",
+    "6:00 DONE 0\ncodex · Review",
   );
 });
 
@@ -242,6 +242,6 @@ test("a refused call is denied: dim in the pane, never on the status line", asyn
   await clock.advance(1000);
   expect(seen.statuses.at(-1)).toBe("◐ Wait 0:01 · no output · 1s");
   expect(await textOf(await paneOf($, "terminal"))).toContain(
-    "Echo test  denied",
+    "0:00 denied\nEcho test",
   );
 });

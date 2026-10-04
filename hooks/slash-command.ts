@@ -55,6 +55,9 @@ export const onCommand = async (
     await update($, selectedAtom, () => "");
     return { text: "shell-flow: finished calls cleared" };
   }
+  if (await read($, openAtom)) {
+    return { text: "shell-flow is already open" };
+  }
   const { columns } = await read($, configAtom);
   const opened = await $.ui.open({
     id: PANE,

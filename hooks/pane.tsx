@@ -92,6 +92,7 @@ export const onRender = async (
       now,
       isBackgroundOnly: await read($, backgroundOnlyAtom),
       selected: await read($, selectedAtom),
+      columns: e.props.bodyColumns,
     },
     {
       toggle: () => {
