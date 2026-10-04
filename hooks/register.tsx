@@ -34,10 +34,6 @@ const agentsAtom = atom(
   NO_AGENTS,
 );
 const openAtom = atom({ plugin: "shell-flow", key: "isOpen" } as const, false);
-const backgroundOnlyAtom = atom(
-  { plugin: "shell-flow", key: "isBackgroundOnly" } as const,
-  false,
-);
 const selectedAtom = atom(
   { plugin: "shell-flow", key: "selected" } as const,
   "",
@@ -126,8 +122,6 @@ const poll = async ($: Engine, config: Config): Promise<void> => {
 const restore = async ($: Engine, config: Config): Promise<void> => {
   const stored = await $.store.get("paneOpen");
   const isOpen = typeof stored === "boolean" ? stored : config.openOnStart;
-  const isBackgroundOnly = (await $.store.get("backgroundOnly")) === true;
-  await update($, backgroundOnlyAtom, () => isBackgroundOnly);
   if (!isOpen) {
     return;
   }

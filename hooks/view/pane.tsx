@@ -1,5 +1,5 @@
 /**
- * The pane's tree: filter and housekeeping buttons, then one row per call,
+ * The pane's tree: housekeeping buttons, then one row per call,
  * newest first, a selected row expanded to its command, tail and stderr.
  * Each row leads with a `[ ▸ ]` Button, so Tab reaches it and Enter expands.
  */
@@ -17,7 +17,6 @@ export interface PaneView {
   readonly calls: readonly ShellCall[];
   readonly agents: ShellAgents;
   readonly now: number;
-  readonly isBackgroundOnly: boolean;
   readonly selected: string;
   /** The pane body's width in cells (`e.props.bodyColumns`). */
   readonly columns: number;
@@ -25,7 +24,6 @@ export interface PaneView {
 
 /** What the pane's buttons do. */
 export interface PaneActions {
-  readonly toggle: () => void;
   readonly clear: () => void;
   readonly close: () => void;
   readonly select: (id: string) => void;
@@ -52,7 +50,7 @@ const sourceOf = (call: ShellCall, agents: ShellAgents): string => {
 
 const NOTE_INDENT = 6;
 const HOTKEYS = 9;
-const HINT = "ctrl+x tab focus · 1–9 expand · f filter · c clear";
+const HINT = "ctrl+x tab focus · 1–9 expand · c clear";
 
 /** How a note's tone draws: its mark, and a color for errors. */
 interface Look {
@@ -181,18 +179,11 @@ const rowOf = (
 
 const toolbarOf = (
   kit: Readonly<Kit>,
-  view: PaneView,
   act: PaneActions,
 ): Readonly<RenderElement> => {
   const { Box, Button } = kit;
   return (
     <Box flexDirection="row" gap={1}>
-      <Button
-        key="filter"
-        label={view.isBackgroundOnly ? "all calls" : "background only"}
-        hotkey="f"
-        onPress={act.toggle}
-      />
       <Button key="clear" label="clear" hotkey="c" onPress={act.clear} />
       <Button
         key="close"
@@ -218,9 +209,7 @@ export const paneTree = (
   act: PaneActions,
 ): Readonly<RenderElement> => {
   const { Box, Text } = kit;
-  const shown = view.calls
-    .filter((call) => !view.isBackgroundOnly || call.background)
-    .toReversed();
+  const shown = view.calls.toReversed();
   const stoppable = shown.filter(
     (call) => call.taskId !== undefined && canStop(call),
   );
@@ -228,14 +217,8 @@ export const paneTree = (
   const hint = [HINT, ...(stopKey === "" ? [] : ["s stop"]), "q close"];
   return (
     <Box flexDirection="column">
-      {toolbarOf(kit, view, act)}
-      {shown.length === 0 && (
-        <Text dimColor>
-          {view.isBackgroundOnly
-            ? "No background calls."
-            : "No Bash calls yet."}
-        </Text>
-      )}
+      {toolbarOf(kit, act)}
+      {shown.length === 0 && <Text dimColor>No Bash calls yet.</Text>}
       {shown.map((call, index) =>
         rowOf(kit, { view, act, stopKey }, { call, index }),
       )}

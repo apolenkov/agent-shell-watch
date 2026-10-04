@@ -32,30 +32,23 @@ test(
   },
 );
 
-test("a pane left open with its filter on comes back so", async ($, on) => {
+test("a pane left open comes back open", async ($, on) => {
   mock.clock(on);
-  const seen = world(on, { paneOpen: true, backgroundOnly: true });
+  const seen = world(on, { paneOpen: true });
   await $.session.start(START);
   expect(seen.opened).toEqual(["shell-flow"]);
-  const pane = await paneOf($, "terminal");
-  const filter = await pane.find({ key: "filter" });
-  expect(filter?.text).toBe("all calls");
 });
 
-test("opening and filtering are remembered; stop forgets the open pane", async ($, on) => {
+test("opening is remembered; stop forgets it", async ($, on) => {
   mock.clock(on);
   const seen = world(on);
   await $.session.start(START);
   await $.command.run({ ...RUN, args: "" });
-  const pane = await paneOf($, "terminal");
-  await pane.press({ key: "filter" });
   await $.session.start(START);
   expect(seen.opened).toEqual(["shell-flow", "shell-flow"]);
   await $.command.run({ ...RUN, args: "stop" });
   await $.session.start(START);
   expect(seen.opened).toEqual(["shell-flow", "shell-flow"]);
-  const filter = await pane.find({ key: "filter" });
-  expect(filter?.text).toBe("all calls");
 });
 
 test("[ close ] is remembered", async ($, on) => {

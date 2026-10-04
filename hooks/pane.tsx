@@ -1,6 +1,6 @@
 /**
  * The pane's drawing: reads the calls and the pane's state, and hands the
- * view its button handlers (filter, clear, close, select, stop).
+ * view its button handlers (clear, close, select, stop).
  */
 import type { EngineInterface, RenderElement, RenderInput } from "claude-code";
 import { atom, read, update } from "claude-code";
@@ -21,10 +21,6 @@ const agentsAtom = atom(
 );
 const nowAtom = atom({ plugin: "shell-flow", key: "now" } as const, 0);
 const openAtom = atom({ plugin: "shell-flow", key: "isOpen" } as const, false);
-const backgroundOnlyAtom = atom(
-  { plugin: "shell-flow", key: "isBackgroundOnly" } as const,
-  false,
-);
 const selectedAtom = atom(
   { plugin: "shell-flow", key: "selected" } as const,
   "",
@@ -71,11 +67,6 @@ const stop = async ($: Engine, taskId: string): Promise<void> => {
   );
 };
 
-const toggle = async ($: Engine): Promise<void> => {
-  const isOn = await update($, backgroundOnlyAtom, (was) => !was);
-  await $.store.set("backgroundOnly", isOn);
-};
-
 const close = async ($: Engine): Promise<void> => {
   await $.store.set("paneOpen", false);
   await update($, openAtom, () => false);
@@ -101,14 +92,10 @@ export const onRender = async (
       calls,
       agents: await read($, agentsAtom),
       now,
-      isBackgroundOnly: await read($, backgroundOnlyAtom),
       selected: await read($, selectedAtom),
       columns: e.props.bodyColumns,
     },
     {
-      toggle: () => {
-        void toggle($);
-      },
       clear: () => {
         void update($, callsAtom, liveOnly);
       },

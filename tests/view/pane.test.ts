@@ -10,7 +10,7 @@ const BG_TEXT =
   "Command running in background with ID: b1. Output is being written to: /t/b1.output. You will be notified.";
 
 for (const surface of SURFACES) {
-  test(`${surface}: rows, filter, expand and stop`, async ($, on) => {
+  test(`${surface}: rows, expand and stop; no filter`, async ($, on) => {
     mock.clock(on);
     const seen = world(on);
     seen.tails.set("/t/b1.output", "step 1\nstep 2\n");
@@ -46,10 +46,9 @@ for (const surface of SURFACES) {
     expect(all).toContain("codex · Codex review");
     expect(all).toContain("main · ls");
 
-    await pane.press({ key: "filter" });
-    const bgOnly = await textOf(pane);
-    expect(bgOnly).not.toContain("List");
-    expect(bgOnly).toContain("bg · main · codex exec review");
+    expect(all).toContain("bg · main · codex exec review");
+    expect(await pane.find({ key: "filter" })).toBeUndefined();
+    expect(all).not.toContain("background only");
 
     const rows = await pane.findAll({ type: "Button" });
     const row = rows.find((button) => button.key?.startsWith("row:") === true);
@@ -215,7 +214,6 @@ for (const surface of SURFACES) {
     const hotkeys = Object.fromEntries(
       buttons.map((button) => [button.key ?? "", button.props["hotkey"]]),
     );
-    expect(hotkeys["filter"]).toBe("f");
     expect(hotkeys["clear"]).toBe("c");
     expect(hotkeys["close"]).toBe("q");
     const rows = buttons.filter(
@@ -232,7 +230,7 @@ for (const surface of SURFACES) {
     );
     expect(stop?.props["hotkey"]).toBe("s");
     expect(texts).toContain(
-      "ctrl+x tab focus · 1–9 expand · f filter · c clear · s stop · q close",
+      "ctrl+x tab focus · 1–9 expand · c clear · s stop · q close",
     );
   });
 }

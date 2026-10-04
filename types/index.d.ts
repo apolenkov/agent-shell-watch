@@ -52,7 +52,6 @@ declare module "claude-code" {
       agents: ShellAgents;
       now: number;
       isOpen: boolean;
-      isBackgroundOnly: boolean;
       selected: string;
     };
   }
