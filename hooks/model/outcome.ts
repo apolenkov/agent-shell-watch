@@ -2,6 +2,7 @@
  * What a Bash `tool.call` result means for the call list.
  */
 import type { BashOutcome } from "./calls.ts";
+import { backgroundIdOf } from "./parse.ts";
 
 interface BashRecord {
   readonly stdout?: unknown;
@@ -13,9 +14,16 @@ interface BashRecord {
 const textOf = (value: unknown): string =>
   typeof value === "string" ? value : "";
 
+// A transcript answer may carry only `text` (a subagent's rows, a headless
+// record): the text is then the output, and names a background launch.
+const textRecord = (text: string): BashRecord => ({
+  stdout: text,
+  backgroundTaskId: backgroundIdOf(text),
+});
+
 const recordOutcome = (result: unknown, text: string): BashOutcome => {
   const record: BashRecord =
-    typeof result === "object" && result !== null ? result : {};
+    typeof result === "object" && result !== null ? result : textRecord(text);
   return {
     isError: false,
     text,

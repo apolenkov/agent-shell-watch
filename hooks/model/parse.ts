@@ -149,10 +149,13 @@ export const lastLines = (text: string, count: number): readonly string[] =>
         .slice(-count)
         .map((line) => line.slice(0, LINE_MAX));
 
+const NOTICE_TAG = "<task-notification>";
+const BACKGROUND_ID = /(?:in background with ID: |background \(ID: )([\w-]+)/u;
+
 const notificationOf = (text: string): TaskNotice | undefined => {
   const taskId = TASK_ID.exec(text)?.[1];
   const code = TASK_EXIT.exec(text)?.[1];
-  return taskId === undefined || !text.includes("<task-notification>")
+  return taskId === undefined
     ? undefined
     : {
         taskId,
@@ -162,15 +165,26 @@ const notificationOf = (text: string): TaskNotice | undefined => {
 };
 
 /**
- * The background tasks' `<task-notification>`s among a row's text blocks.
+ * Every background task's `<task-notification>` among a row's text blocks,
+ * several in one block included.
  * @param texts the row's text blocks
  * @returns each notice's task, status and exit code
  */
 export const noticesOf = (texts: readonly string[]): readonly TaskNotice[] =>
-  texts.flatMap((text) => {
-    const notice = notificationOf(text);
-    return notice === undefined ? [] : [notice];
-  });
+  texts
+    .flatMap((text) => text.split(NOTICE_TAG).slice(1))
+    .flatMap((part) => {
+      const notice = notificationOf(part);
+      return notice === undefined ? [] : [notice];
+    });
+
+/**
+ * The background task a Bash result's text launched, in either phrasing.
+ * @param text the result as the model reads it
+ * @returns the task id, or undefined for a foreground result
+ */
+export const backgroundIdOf = (text: string): string | undefined =>
+  BACKGROUND_ID.exec(text)?.[1];
 
 /** What `$.agent.list()` says of one subagent. */
 export interface AgentEntry {

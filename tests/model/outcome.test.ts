@@ -73,3 +73,17 @@ test("a refusal before the command ran is a denial", () => {
     }),
   ).toEqual({ isError: true, text: "Exit code 1\nls: x: Permission denied" });
 });
+
+test("a text-only answer is the output; a text-only launch names its task", () => {
+  expect(outcomeOf({ text: "a\nb" })).toMatchObject({ stdout: "a\nb" });
+  expect(
+    outcomeOf({
+      text: "Command running in background with ID: b2. Output is being written to: /t/b2.output.",
+    }),
+  ).toMatchObject({ backgroundTaskId: "b2" });
+  expect(
+    outcomeOf({
+      text: "Command was moved to the background (ID: b3). Output is being written to: /t/b3.output.",
+    }),
+  ).toMatchObject({ backgroundTaskId: "b3" });
+});
