@@ -1,4 +1,4 @@
-import type { AgentInfo, On } from "claude-code";
+import type { AgentInfo, On, SessionMessage } from "claude-code";
 import { mock } from "claude-code/testing";
 
 /** What the mocked world beneath the plugin saw and holds. */
@@ -8,6 +8,8 @@ export interface World {
   readonly tails: Map<string, string>;
   readonly stops: string[];
   readonly opened: string[];
+  /** What `$.session.messages()` answers, by agent id ("" for the main loop). */
+  readonly transcripts: Map<string, unknown[]>;
 }
 
 /**
@@ -31,6 +33,7 @@ export const world = (
     tails: new Map(),
     stops: [],
     opened: [],
+    transcripts: new Map(),
   };
   on("session.start", (_$, e) => ({ cwd: e.cwd }));
   on("command.register", (_$, e) => ({ value: { command: e.name } }));
@@ -44,6 +47,9 @@ export const world = (
   });
   on("ui.close", () => ({ value: undefined }));
   on("agent.list", () => ({ value: agents }));
+  on("session.messages", (_$, e) => ({
+    value: (seen.transcripts.get(e.agentId ?? "") ?? []) as SessionMessage[],
+  }));
   on("fs.stat", (_$, e) => {
     const file = seen.files.get(e.path);
     if (file === undefined) {

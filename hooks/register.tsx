@@ -4,19 +4,22 @@
  * Every hook observes and passes its event on unchanged. The poller lives
  * here: the engine follows `$` only into functions of the same file.
  */
-import type { EngineInterface, Register } from "claude-code";
+import type { AgentInfo, EngineInterface, Register } from "claude-code";
 import { atom, read, update } from "claude-code";
 
-import type { ShellCall } from "../types";
+import type { ShellAgents, ShellCall } from "../types";
+import { backfilled, merged, type MessageRow } from "./model/backfill.ts";
 import { classified, hasLive, polled, tailed } from "./model/calls.ts";
 import { type Config, configOf } from "./model/config.ts";
 import { statusLineOf } from "./model/format.ts";
+import { agentLabelOf } from "./model/parse.ts";
 import { isTailDue, tailPathOf, watchedOf } from "./model/poll.ts";
 import { onRender } from "./pane.tsx";
 import { onClose, onCommand, PANE } from "./slash-command.ts";
 import { onAppend, onToolCall } from "./track.ts";
 
 const NO_CALLS: readonly ShellCall[] = [];
+const NO_AGENTS: ShellAgents = {};
 const callsAtom = atom(
   { plugin: "shell-flow", key: "calls" } as const,
   NO_CALLS,
@@ -26,6 +29,10 @@ const configAtom = atom(
   configOf({}),
 );
 const nowAtom = atom({ plugin: "shell-flow", key: "now" } as const, 0);
+const agentsAtom = atom(
+  { plugin: "shell-flow", key: "agents" } as const,
+  NO_AGENTS,
+);
 const openAtom = atom({ plugin: "shell-flow", key: "isOpen" } as const, false);
 const backgroundOnlyAtom = atom(
   { plugin: "shell-flow", key: "isBackgroundOnly" } as const,
@@ -128,6 +135,52 @@ const restore = async ($: Engine, config: Config): Promise<void> => {
   await update($, openAtom, () => true);
 };
 
+const rowsOf = async (
+  $: Engine,
+  agentId?: string,
+): Promise<readonly MessageRow[]> => {
+  try {
+    const rows =
+      agentId === undefined
+        ? await $.session.messages()
+        : await $.session.messages({ agentId });
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+};
+
+const agentsOf = async ($: Engine): Promise<readonly AgentInfo[]> => {
+  try {
+    return await $.agent.list();
+  } catch {
+    return [];
+  }
+};
+
+// Calls made before the mod loaded (enabled mid-session, a reload, an
+// update): rebuilt from the main transcript and each running agent's.
+const backfill = async ($: Engine, config: Config): Promise<void> => {
+  const now = await $.clock.now();
+  const listed = await agentsOf($);
+  const agents = listed.filter((agent) => agent.status === "running");
+  const main = backfilled(await rowsOf($), undefined, now);
+  const subs = await Promise.all(
+    agents.map(async (agent) =>
+      backfilled(await rowsOf($, agent.id), agent.id, now),
+    ),
+  );
+  await update($, agentsAtom, (known) => ({
+    ...Object.fromEntries(
+      agents.map((agent) => [agent.id, agentLabelOf(agents, agent.id)]),
+    ),
+    ...known,
+  }));
+  await update($, callsAtom, (calls) =>
+    merged(calls, [...main, ...subs.flat()], config.maxCalls),
+  );
+};
+
 /**
  * Wires shell-flow's hooks.
  * @param on the registrar
@@ -153,6 +206,7 @@ export const register: Register = (on, options) => {
     $.clock.every(POLL_MS, () => {
       void poll($, config);
     });
+    await backfill($, config);
     await restore($, config);
     return started;
   });
@@ -160,5 +214,12 @@ export const register: Register = (on, options) => {
   on("session.append", onAppend);
   on("command.run", { command: "shell-flow" }, onCommand);
   on("ui.close", onClose);
+  // Opening the pane (the command, a restore) picks up what was missed.
+  on("ui.open", async ($, e, next) => {
+    if (e.id === PANE) {
+      await backfill($, config);
+    }
+    return next(e);
+  });
   on("ui.render", { component: "Pane", requestId: "shell-flow" }, onRender);
 };
