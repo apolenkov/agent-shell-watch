@@ -1,8 +1,6 @@
 /**
  * What a Bash `tool.call` result means for the call list.
  */
-import type { ToolCallResult } from "claude-code";
-
 import type { BashOutcome } from "./calls.ts";
 
 interface BashRecord {
@@ -50,7 +48,15 @@ const erroredOutcome = (text: string): BashOutcome =>
     ? { isError: false, text, interrupted: true }
     : refusedOr(text);
 
-const answeredOutcome = (ran: Readonly<ToolCallResult>): BashOutcome =>
+/** What `next(e)` resolved to, or a transcript's tool use, as read here. */
+export interface BashAnswer {
+  readonly deny?: string | undefined;
+  readonly isError?: boolean | undefined;
+  readonly result?: unknown;
+  readonly text?: string | undefined;
+}
+
+const answeredOutcome = (ran: BashAnswer): BashOutcome =>
   ran.isError === true
     ? erroredOutcome(ran.text ?? "")
     : recordOutcome(ran.result, ran.text ?? "");
@@ -60,7 +66,7 @@ const answeredOutcome = (ran: Readonly<ToolCallResult>): BashOutcome =>
  * @param ran the chain's answer: denied, errored, or the tool's record
  * @returns the outcome
  */
-export const outcomeOf = (ran: Readonly<ToolCallResult>): BashOutcome =>
+export const outcomeOf = (ran: BashAnswer): BashOutcome =>
   ran.deny === undefined
     ? answeredOutcome(ran)
     : { isError: false, text: "", denied: ran.deny };
