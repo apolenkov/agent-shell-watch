@@ -68,8 +68,9 @@ const STOP_WIDTH = 9;
 // The toolbar and the hint line around the rows.
 const CHROME_ROWS = 2;
 const HOTKEYS = 9;
-// The keys are drawn on the buttons themselves ([1 ▸], [c clear], [s stop]).
-const HINT_FOCUSED = "keys press the [buttons] · Esc → prompt";
+// The terminal does not draw a bracketed Button's hotkey, so each label
+// carries its own key: [ 1 ▸ ], [ c clear ], [ q close ], [ s stop ].
+const HINT_FOCUSED = "1–9 open · c clear · q close · Esc → prompt";
 const HINT_UNFOCUSED = "/shell-flow → keys";
 
 /** How a note's tone draws: its mark, and a color for errors. */
@@ -103,6 +104,11 @@ interface Row {
 const canStop = (call: ShellCall): boolean =>
   call.background && isLive(call) && call.taskId !== undefined;
 
+const toggleLabelOf = (index: number, isOpen: boolean): string => {
+  const arrow = isOpen ? "▾" : "▸";
+  return index < HOTKEYS ? `${String(index + 1)} ${arrow}` : arrow;
+};
+
 const digitOf = (index: number): Readonly<{ hotkey?: string }> =>
   index < HOTKEYS ? { hotkey: String(index + 1) } : {};
 
@@ -116,7 +122,7 @@ const stopOf = (
     canStop(call) && (
       <Button
         key={`stop:${call.id}`}
-        label="stop"
+        label={stopKey === call.id ? "s stop" : "stop"}
         {...(stopKey === call.id && { hotkey: "s" })}
         onPress={() => {
           act.stop(call.taskId ?? "");
@@ -142,7 +148,7 @@ const headRowOf = (
     <Box flexDirection="row" gap={1}>
       <Button
         key={`row:${call.id}`}
-        label={view.selected === call.id ? "▾" : "▸"}
+        label={toggleLabelOf(index, view.selected === call.id)}
         {...digitOf(index)}
         {...(index === 0 && { autoFocus: true })}
         onPress={() => {
@@ -231,10 +237,10 @@ const toolbarOf = (
   const { Box, Button } = kit;
   return (
     <Box flexDirection="row" gap={1}>
-      <Button key="clear" label="clear" hotkey="c" onPress={act.clear} />
+      <Button key="clear" label="c clear" hotkey="c" onPress={act.clear} />
       <Button
         key="close"
-        label="close"
+        label="q close"
         role="dismiss"
         hotkey="q"
         onPress={act.close}

@@ -49,12 +49,12 @@ export const onCommand = async (
     await $.store.set("paneOpen", false);
     await update($, openAtom, () => false);
     await $.ui.close({ id: PANE });
-    return { text: "shell-flow closed" };
+    return { text: "closed" };
   }
   if (argument === "clear") {
     await update($, callsAtom, liveOnly);
     await update($, selectedAtom, () => "");
-    return { text: "shell-flow: finished calls cleared" };
+    return { text: "finished calls cleared" };
   }
   const { columns } = await read($, configAtom);
   const opened = await $.ui.open({
@@ -67,8 +67,8 @@ export const onCommand = async (
   await $.store.set("paneOpen", true);
   return {
     text: opened.isPlaced
-      ? "shell-flow: keys on the pane · Esc → prompt · /shell-flow again refocuses"
-      : "shell-flow: the pane waits for room",
+      ? "keys on the pane · Esc → prompt · /shell-flow again refocuses"
+      : "the pane waits for room",
   };
 };
 

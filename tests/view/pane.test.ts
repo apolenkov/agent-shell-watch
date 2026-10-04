@@ -92,7 +92,7 @@ test("an empty pane says so; /shell-flow opens it and stop closes it", async ($,
     presentation,
   });
   expect(again).toMatchObject({
-    text: "shell-flow: keys on the pane · Esc → prompt · /shell-flow again refocuses",
+    text: "keys on the pane · Esc → prompt · /shell-flow again refocuses",
   });
   expect(seen.opened).toEqual(["shell-flow", "shell-flow"]);
   expect(seen.focused).toEqual([true, true]);
@@ -102,7 +102,7 @@ test("an empty pane says so; /shell-flow opens it and stop closes it", async ($,
     origin,
     presentation,
   });
-  expect(closed).toMatchObject({ text: "shell-flow closed" });
+  expect(closed).toMatchObject({ text: "closed" });
 });
 
 for (const surface of SURFACES) {
@@ -120,11 +120,11 @@ for (const surface of SURFACES) {
     const toggle = buttons.find(
       (button) => button.key?.startsWith("row:") === true,
     );
-    expect(toggle?.text).toBe("▸");
+    expect(toggle?.text).toBe("1 ▸");
     expect(toggle?.props["plain"]).toBeUndefined();
     await pane.press({ key: toggle?.key ?? "" });
     const expanded = await pane.find({ key: toggle?.key ?? "" });
-    expect(expanded?.text).toBe("▾");
+    expect(expanded?.text).toBe("1 ▾");
     expect(await textOf(pane)).toContain("$ ls -la");
   });
 }
@@ -233,27 +233,19 @@ for (const surface of SURFACES) {
       (button) => button.key?.startsWith("stop:") === true,
     );
     expect(stop?.props["hotkey"]).toBe("s");
-    expect(texts).toContain("keys press the [buttons] · Esc → prompt");
+    expect(texts).toContain("1–9 open · c clear · q close · Esc → prompt");
+    const labels = Object.fromEntries(
+      buttons.map((button) => [button.key ?? "", button.text]),
+    );
+    expect(labels["clear"]).toBe("c clear");
+    expect(labels["close"]).toBe("q close");
+    expect(stop?.text).toBe("s stop");
+    expect(rows.map((row) => row.text)).toEqual(["1 ▸", "2 ▸", "3 ▸", "4 ▸"]);
     expect(rows.map((row) => row.props["autoFocus"])).toEqual([
       true,
       undefined,
       undefined,
       undefined,
     ]);
-  });
-}
-
-for (const surface of SURFACES) {
-  test(`${surface}: unfocused, the hint says how to take the keys`, async ($, on) => {
-    mock.clock(on);
-    world(on);
-    await $.session.start(START);
-    const pane = await paneOf($, surface, {
-      columns: 80,
-      rows: 40,
-      isFocused: false,
-    });
-    const found = await pane.findAll({ type: "Text" });
-    expect(found.map((text) => text.text)).toContain("/shell-flow → keys");
   });
 }

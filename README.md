@@ -32,22 +32,22 @@ denial's reason, dim). Every line is one line, cut to the pane's width.
 
 ```
 [ c clear ] [ q close ]
-[1 ▸] ◐ 0:51 output 1s ago  Count steps  [ s stop ]
+[ 1 ▸ ] ◐ 0:51 output 1s ago  Count steps  [ s stop ]
       bg · main · for i in $(seq 40); do echo step $i; sleep 2; done
       › step 26
-[2 ▸] ✗ 0:03 exit 2  Typecheck
+[ 2 ▸ ] ✗ 0:03 exit 2  Typecheck
       main · tsc -p .
       ✗ src/a.ts(3,1): error TS2322: Type 'string' is not assignable…
-[3 ▸] ● 0:01 exit 0  List files
+[ 3 ▸ ] ● 0:01 exit 0  List files
       main · ls -1 | head -3
       › README.md
 +4 older
-keys press the [buttons] · Esc → prompt
+1–9 open · c clear · q close · Esc → prompt
 ```
 
 `/shell-flow` gives the pane the keyboard (again, if it already is open:
 it refocuses); Esc hands the keys back to the prompt and the pane stays. The
-first row's `[ ▸ ]` holds the focus, so Enter expands the most important call.
+first row's `[ 1 ▸ ]` holds the focus, so Enter expands the most important call.
 Each button shows its key: `1`–`9` expand or collapse that row (the full
 command, last 40 lines, stderr, output and watch files), `c` clear finished calls, `s` stop the running background
 call (when there is one), `q` close. Tab walks the buttons, Enter presses.
