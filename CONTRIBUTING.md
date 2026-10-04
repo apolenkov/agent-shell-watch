@@ -7,7 +7,7 @@ npm ci            # installs tooling and the git hooks (lefthook)
 npm run check     # format, typecheck, lint, repo lint, validate, tests
 ```
 
-shell-flow needs Claude Code 2.1.288+ with `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`. Try it live with
+shell-flow needs Claude Code 2.1.287+ (mods are on by default). Try it live with
 `claude --plugin-dir .` from the repository root.
 
 ## Rules of the house

@@ -1,5 +1,5 @@
 # Records demo/demo.gif: `vhs demo/demo.tape` from the repository root.
-# Needs Claude Code with shell-flow installed and CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1.
+# Needs Claude Code 2.1.287+ with shell-flow installed.
 # demo/bin/codex and demo/bin/tsc are stand-ins so the recording is free and
 # repeatable. Run from a trusted, empty project at /tmp/my-app. The recorded
 # session loads no personal instructions (agents-md managed-only), no status

@@ -91,8 +91,8 @@ existing `shell-flow@claude-mods` install keeps working):
 /plugin install shell-flow@claude-mods
 ```
 
-Requirements: Claude Code 2.1.288 or later with function hooks enabled
-(`CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`, early access), and `tail` on `PATH`.
+Requirements: Claude Code 2.1.287 or later (mods are on by default), and
+`tail` on `PATH`.
 
 ## Options
 
