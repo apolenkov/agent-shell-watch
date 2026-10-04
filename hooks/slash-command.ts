@@ -56,9 +56,6 @@ export const onCommand = async (
     await update($, selectedAtom, () => "");
     return { text: "shell-flow: finished calls cleared" };
   }
-  if (await read($, openAtom)) {
-    return { text: "shell-flow is already open" };
-  }
   const { columns } = await read($, configAtom);
   const opened = await $.ui.open({
     id: PANE,
@@ -70,7 +67,7 @@ export const onCommand = async (
   await $.store.set("paneOpen", true);
   return {
     text: opened.isPlaced
-      ? "shell-flow opened · /shell-flow stop closes"
+      ? "shell-flow: keys on the pane · Esc → prompt · /shell-flow again refocuses"
       : "shell-flow: the pane waits for room",
   };
 };

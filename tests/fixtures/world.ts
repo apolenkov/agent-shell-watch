@@ -8,6 +8,8 @@ export interface World {
   readonly tails: Map<string, string>;
   readonly stops: string[];
   readonly opened: string[];
+  /** Whether each `$.ui.open` asked for the keyboard (`focus`). */
+  readonly focused: boolean[];
   /** What `$.session.messages()` answers, by agent id ("" for the main loop). */
   readonly transcripts: Map<string, unknown[]>;
 }
@@ -33,6 +35,7 @@ export const world = (
     tails: new Map(),
     stops: [],
     opened: [],
+    focused: [],
     transcripts: new Map(),
   };
   on("session.start", (_$, e) => ({ cwd: e.cwd }));
@@ -43,6 +46,7 @@ export const world = (
   });
   on("ui.open", (_$, e) => {
     seen.opened.push(e.id);
+    seen.focused.push(e.focus === true);
     return { value: { isPlaced: true } };
   });
   on("ui.close", () => ({ value: undefined }));

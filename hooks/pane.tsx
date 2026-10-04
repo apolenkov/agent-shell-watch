@@ -95,6 +95,7 @@ export const onRender = async (
       selected: await read($, selectedAtom),
       columns: e.props.bodyColumns,
       rows: e.props.scroll.bodyRows,
+      isFocused: e.props.isFocused,
     },
     {
       clear: () => {

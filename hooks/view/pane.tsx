@@ -29,6 +29,8 @@ export interface PaneView {
   readonly columns: number;
   /** The pane body's height in rows (`e.props.scroll.bodyRows`). */
   readonly rows: number;
+  /** Whether the pane holds the keyboard (`e.props.isFocused`). */
+  readonly isFocused: boolean;
 }
 
 /** What the pane's buttons do. */
@@ -64,7 +66,9 @@ const STOP_WIDTH = 9;
 // The toolbar and the hint line around the rows.
 const CHROME_ROWS = 2;
 const HOTKEYS = 9;
-const HINT = "ctrl+x tab focus · 1–9 expand · c clear";
+// The keys are drawn on the buttons themselves ([1 ▸], [c clear], [s stop]).
+const HINT_FOCUSED = "keys press the [buttons] · Esc → prompt";
+const HINT_UNFOCUSED = "/shell-flow → keys";
 
 /** How a note's tone draws: its mark, and a color for errors. */
 interface Look {
@@ -98,6 +102,26 @@ const canStop = (call: ShellCall): boolean =>
 const digitOf = (index: number): Readonly<{ hotkey?: string }> =>
   index < HOTKEYS ? { hotkey: String(index + 1) } : {};
 
+const stopOf = (
+  kit: Readonly<Kit>,
+  { act, stopKey }: Context,
+  call: ShellCall,
+): Readonly<RenderElement> | false => {
+  const { Button } = kit;
+  return (
+    canStop(call) && (
+      <Button
+        key={`stop:${call.id}`}
+        label="stop"
+        {...(stopKey === call.id && { hotkey: "s" })}
+        onPress={() => {
+          act.stop(call.taskId ?? "");
+        }}
+      />
+    )
+  );
+};
+
 const headRowOf = (
   kit: Readonly<Kit>,
   { view, act, stopKey }: Context,
@@ -116,6 +140,7 @@ const headRowOf = (
         key={`row:${call.id}`}
         label={view.selected === call.id ? "▾" : "▸"}
         {...digitOf(index)}
+        {...(index === 0 && { autoFocus: true })}
         onPress={() => {
           act.select(call.id);
         }}
@@ -125,16 +150,7 @@ const headRowOf = (
       <Text dimColor={call.status === "denied"} wrap="truncate-end">
         {fit(oneLine(nameOf(call)), room)}
       </Text>
-      {canStop(call) && (
-        <Button
-          key={`stop:${call.id}`}
-          label="stop"
-          {...(stopKey === call.id && { hotkey: "s" })}
-          onPress={() => {
-            act.stop(call.taskId ?? "");
-          }}
-        />
-      )}
+      {stopOf(kit, { view, act, stopKey }, call)}
     </Box>
   );
 };
@@ -234,7 +250,6 @@ export const paneTree = (
     (call) => call.taskId !== undefined && canStop(call),
   );
   const stopKey = stoppable.length === 1 ? (stoppable[0]?.id ?? "") : "";
-  const hint = [HINT, ...(stopKey === "" ? [] : ["s stop"]), "q close"];
   return (
     <Box flexDirection="column">
       {toolbarOf(kit, act)}
@@ -244,7 +259,7 @@ export const paneTree = (
       )}
       {hidden > 0 && <Text dimColor>{`+${String(hidden)} older`}</Text>}
       <Text dimColor wrap="truncate-end">
-        {fit(hint.join(" · "), view.columns)}
+        {fit(view.isFocused ? HINT_FOCUSED : HINT_UNFOCUSED, view.columns)}
       </Text>
     </Box>
   );

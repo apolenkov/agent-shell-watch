@@ -42,12 +42,14 @@ denial's reason, dim). Every line is one line, cut to the pane's width.
       main · ls -1 | head -3
       › README.md
 +4 older
-ctrl+x tab focus · 1–9 expand · c clear · s stop · q close
+keys press the [buttons] · Esc → prompt
 ```
 
-Keys, once the pane holds the keyboard (ctrl+x tab, or a click): `1`–`9`
-expand or collapse that row (the full command, last 40 lines, stderr, output
-and watch files), `c` clear finished calls, `s` stop the running background
+`/shell-flow` gives the pane the keyboard (again, if it already is open:
+it refocuses); Esc hands the keys back to the prompt and the pane stays. The
+first row's `[ ▸ ]` holds the focus, so Enter expands the most important call.
+Each button shows its key: `1`–`9` expand or collapse that row (the full
+command, last 40 lines, stderr, output and watch files), `c` clear finished calls, `s` stop the running background
 call (when there is one), `q` close. Tab walks the buttons, Enter presses.
 The pane remembers across sessions whether you left it open.
 

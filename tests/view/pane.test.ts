@@ -91,7 +91,11 @@ test("an empty pane says so; /shell-flow opens it and stop closes it", async ($,
     origin,
     presentation,
   });
-  expect(again).toMatchObject({ text: "shell-flow is already open" });
+  expect(again).toMatchObject({
+    text: "shell-flow: keys on the pane · Esc → prompt · /shell-flow again refocuses",
+  });
+  expect(seen.opened).toEqual(["shell-flow", "shell-flow"]);
+  expect(seen.focused).toEqual([true, true]);
   const closed = await $.command.run({
     command: "shell-flow",
     args: "stop",
@@ -229,8 +233,27 @@ for (const surface of SURFACES) {
       (button) => button.key?.startsWith("stop:") === true,
     );
     expect(stop?.props["hotkey"]).toBe("s");
-    expect(texts).toContain(
-      "ctrl+x tab focus · 1–9 expand · c clear · s stop · q close",
-    );
+    expect(texts).toContain("keys press the [buttons] · Esc → prompt");
+    expect(rows.map((row) => row.props["autoFocus"])).toEqual([
+      true,
+      undefined,
+      undefined,
+      undefined,
+    ]);
+  });
+}
+
+for (const surface of SURFACES) {
+  test(`${surface}: unfocused, the hint says how to take the keys`, async ($, on) => {
+    mock.clock(on);
+    world(on);
+    await $.session.start(START);
+    const pane = await paneOf($, surface, {
+      columns: 80,
+      rows: 40,
+      isFocused: false,
+    });
+    const found = await pane.findAll({ type: "Text" });
+    expect(found.map((text) => text.text)).toContain("/shell-flow → keys");
   });
 }

@@ -32,11 +32,12 @@ test(
   },
 );
 
-test("a pane left open comes back open", async ($, on) => {
+test("a pane left open comes back open, without taking the keys", async ($, on) => {
   mock.clock(on);
   const seen = world(on, { paneOpen: true });
   await $.session.start(START);
   expect(seen.opened).toEqual(["shell-flow"]);
+  expect(seen.focused).toEqual([false]);
 });
 
 test("opening is remembered; stop forgets it", async ($, on) => {
