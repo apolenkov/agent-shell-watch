@@ -1,5 +1,6 @@
 import { expect, mock, test } from "claude-code/testing";
 
+import { advance } from "./fixtures/advance.ts";
 import { world } from "./fixtures/world.ts";
 
 const START = { cwd: "/w", surface: "terminal", isInteractive: true } as const;
@@ -14,12 +15,10 @@ test("the status line is set again on every tick, even when unchanged", async ($
   }));
   await $.session.start(START);
   await $.tool.call({ tool: "Bash", command: "tsc", description: "Typecheck" });
-  await clock.advance(1000);
+  await advance(clock, 1000);
   const before = seen.statuses.length;
-  await clock.advance(3000);
-  expect(seen.statuses.slice(before)).toEqual([
-    "✗ Typecheck exit 2",
-    "✗ Typecheck exit 2",
-    "✗ Typecheck exit 2",
-  ]);
+  await advance(clock, 3000);
+  const after = seen.statuses.slice(before);
+  expect(after.length).toBeGreaterThanOrEqual(3);
+  expect([...new Set(after)]).toEqual(["✗ Typecheck exit 2"]);
 });

@@ -114,6 +114,8 @@ const poll = async ($: Engine, config: Config): Promise<void> => {
   await update($, callsAtom, (calls) =>
     calls.map((call) => classified(call, now, config.limits)),
   );
+  // The status line shows what this poll found, not only the next tick.
+  await tick($, config);
 };
 
 // The person's last choice outlives the session in $.store; openOnStart is

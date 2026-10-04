@@ -1,5 +1,6 @@
 import { expect, mock, test } from "claude-code/testing";
 
+import { advance } from "../fixtures/advance.ts";
 import { paneOf } from "../fixtures/pane-of.ts";
 import { textOf } from "../fixtures/text-of.ts";
 import { world } from "../fixtures/world.ts";
@@ -37,7 +38,7 @@ for (const surface of ["terminal", "desktop"] as const) {
     await $.command.run(RUN);
     seen.files.set("/t/b1.output", { size: 21, mtimeMs: 0 });
     seen.tails.set("/t/b1.output", "step 1\nstep 2\nstep 3\n");
-    await clock.advance(2000);
+    await advance(clock, 2000);
     expect(await textOf(await paneOf($, surface))).toContain("› step 3");
   });
 }

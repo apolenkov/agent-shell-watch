@@ -1,5 +1,6 @@
 import { expect, mock, test } from "claude-code/testing";
 
+import { advance } from "../fixtures/advance.ts";
 import { paneOf } from "../fixtures/pane-of.ts";
 import { world } from "../fixtures/world.ts";
 
@@ -47,9 +48,9 @@ for (const surface of SURFACES) {
         command: HEREDOC,
         description: "Rewrite the parser with a long description that runs on",
       });
-      await clock.advance(1000);
+      await advance(clock, 1000);
       await $.tool.call({ tool: "Bash", command: COMMIT });
-      await clock.advance(1000);
+      await advance(clock, 1000);
       await $.tool.call({
         tool: "Bash",
         command: "sleep 60",
@@ -95,7 +96,7 @@ for (const surface of SURFACES) {
         command: `echo ${String(n)}`,
         description: `Old ${String(n)}`,
       });
-      await clock.advance(1000);
+      await advance(clock, 1000);
     }
     await $.tool.call({
       tool: "Bash",
