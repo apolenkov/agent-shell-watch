@@ -131,33 +131,33 @@ label (a narrow pane cuts the label, never the time or outcome), its command
 (`bg ·` for a background one), and its last output line (a failure's last
 error in red, a denial's reason, dim).
 
-| Command / key        | What it does                                                                                                           |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `/shell-watch`       | Opens the pane and gives it the keyboard (refocuses it if already open)                                                |
-| `/shell-watch clear` | Forgets finished calls                                                                                                 |
-| `/shell-watch stop`  | Closes the pane                                                                                                        |
-| `1`–`9`              | On a header: fold or open its group. On a row: expand it (full command, last 40 lines, stderr, output and watch files) |
-| `f`                  | Folds every group, or opens them all when all are folded                                                               |
-| `c`                  | Clears finished calls                                                                                                  |
-| `s`                  | Stops the running background call (when there is one) with `TaskStop`                                                  |
-| `q`                  | Closes the pane                                                                                                        |
-| Tab / Enter          | Walks the buttons / presses one                                                                                        |
-| Esc                  | Hands the keys back to the prompt; the pane stays                                                                      |
+| Command / key        | What it does                                                                                                         |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `/shell-watch`       | Opens the pane and gives it the keyboard (refocuses it if already open)                                              |
+| `/shell-watch clear` | Forgets finished calls                                                                                               |
+| `/shell-watch stop`  | Closes the pane                                                                                                      |
+| `1`–`9`              | Folds or opens a group (on its header) or expands a row: full command, last 40 lines, stderr, output and watch files |
+| `f`                  | Folds every group, or opens them all when all are folded                                                             |
+| `c`                  | Clears finished calls                                                                                                |
+| `s`                  | Stops the running background call (when there is one) with `TaskStop`                                                |
+| `q`                  | Closes the pane                                                                                                      |
+| Tab / Enter          | Walks the buttons / presses one                                                                                      |
+| Esc                  | Hands the keys back to the prompt; the pane stays                                                                    |
 
 The first line's `[ 1 ▾ ]` holds the focus.
 
 ### Glyphs
 
-| Glyph            | Meaning                                                                                                                                                 |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `◐`              | running                                                                                                                                                 |
-| `●`              | done                                                                                                                                                    |
-| `✗`              | failed                                                                                                                                                  |
-| `⚠`              | quiet or hung                                                                                                                                           |
-| `○`              | stopped                                                                                                                                                 |
-| dim `○ denied`   | refused before it ran (a permission rule, a hook, you); never reaches the status line                                                                   |
-| dim `○ no match` | a search or test (`grep`, `rg`, `ag`, `ack`, `git grep`, `diff`, `test`/`[`, `cmp`, `pgrep`) ended a command with exit 1; never reaches the status line |
-| `—`              | the time of a call rebuilt from the transcript without a duration                                                                                       |
+| Glyph        | Meaning                                                                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `◐`          | running                                                                                                                                                       |
+| `●`          | done                                                                                                                                                          |
+| `✗`          | failed                                                                                                                                                        |
+| `⚠`          | quiet or hung                                                                                                                                                 |
+| `○`          | stopped                                                                                                                                                       |
+| `○ denied`   | (dim) refused before it ran (a permission rule, a hook, you); never reaches the status line                                                                   |
+| `○ no match` | (dim) a search or test (`grep`, `rg`, `ag`, `ack`, `git grep`, `diff`, `test`/`[`, `cmp`, `pgrep`) ended a command with exit 1; never reaches the status line |
+| `—`          | the time of a call rebuilt from the transcript without a duration                                                                                             |
 
 A runner's outcome is its guard verdict (`DONE n`, `RATE_LIMIT epoch`,
 `STALLED reason`, `BUSY pid file`), else the exit code.
