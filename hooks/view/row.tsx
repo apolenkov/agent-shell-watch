@@ -58,6 +58,8 @@ const NOTE_INDENT = 6;
 // `[1 ▸] ● ` before the state, a gap before the label, `[s stop]` after it.
 const HEAD_PREFIX = 9;
 const STOP_WIDTH = 9;
+// The longest `← by` tag a runner row's head spends on its starter.
+const BY_MAX = 32;
 /** How many leading lines get a digit hotkey. */
 const HOTKEYS = 9;
 
@@ -83,10 +85,12 @@ export interface RowContext {
   readonly fit: Pick<Visible, "isCompact" | "detailRoom">;
 }
 
-/** One row as drawn: its call and its place among the shown lines. */
+/** One row as drawn: its call, its place among the shown lines, who started it. */
 export interface Row {
   readonly call: ShellCall;
   readonly index: number;
+  /** The agent that started the call, said in the head when set. */
+  readonly by?: string;
 }
 
 /**
@@ -139,15 +143,18 @@ const stopOf = (
 const headRowOf = (
   kit: Readonly<Kit>,
   { view, act, stopKey }: RowContext,
-  { call, index }: Row,
+  { call, index, by }: Row,
 ): Readonly<RenderElement> => {
   const { Box, Button, Text } = kit;
   const state = fit(stateOf(call, view.now), view.columns - HEAD_PREFIX);
+  // The runners view has no group header: the row names who started it.
+  const tag = by === undefined ? "" : `← ${fit(oneLine(by), BY_MAX)}`;
   const room =
     view.columns -
     HEAD_PREFIX -
     state.length -
-    (canStop(call) ? STOP_WIDTH : 0);
+    (canStop(call) ? STOP_WIDTH : 0) -
+    (tag === "" ? 0 : tag.length + 1);
   return (
     <Box flexDirection="row" gap={1}>
       <Button
@@ -164,6 +171,7 @@ const headRowOf = (
       <Text dimColor={DIM.has(call.status)} wrap="truncate-end">
         {fit(oneLine(nameOf(call)), room)}
       </Text>
+      {tag !== "" && <Text dimColor>{tag}</Text>}
       {stopOf(kit, { act, stopKey }, call)}
     </Box>
   );
@@ -195,7 +203,7 @@ const noteRowOf = (
 const bodyOf = (
   kit: Readonly<Kit>,
   { view, fit: room }: RowContext,
-  call: ShellCall,
+  { call }: Row,
 ): readonly Readonly<RenderElement>[] => {
   const { Text } = kit;
   const width = view.columns - NOTE_INDENT;
@@ -236,7 +244,7 @@ export const rowOf = (
     <Box key={`call:${row.call.id}`} flexDirection="column">
       {headRowOf(kit, context, row)}
       <Box paddingLeft={NOTE_INDENT} flexDirection="column">
-        {bodyOf(kit, context, row.call)}
+        {bodyOf(kit, context, row)}
       </Box>
     </Box>
   );

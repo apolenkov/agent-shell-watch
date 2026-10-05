@@ -1,7 +1,12 @@
 import { expect, test } from "claude-code/testing";
 
 import { type Group, groupsOf } from "../../hooks/model/groups.ts";
-import { paneLayoutOf, rowsWantedOf } from "../../hooks/model/pane-items.ts";
+import {
+  paneLayoutOf,
+  rowsWantedFor,
+  rowsWantedOf,
+  runnerRowsWantedOf,
+} from "../../hooks/model/pane-items.ts";
 import { callOf } from "../fixtures/call-of.ts";
 
 const AGENTS = {
@@ -73,4 +78,26 @@ test("a selected row in a folded group is not drawn", () => {
 test("the height asked for counts the headers", () => {
   // chrome 2 + headers 3 + m1, m2, s1 at two lines each (head, command)
   expect(rowsWantedOf(owners(), {})).toBe(11);
+});
+
+test("the runners view asks for chrome, the summary line and each row", () => {
+  const none = runnerRowsWantedOf([]);
+  expect(none).toBe(6);
+  const calls = Array.from({ length: 3 }, (_, index) =>
+    callOf({ id: `r${String(index)}`, runner: "pi" }),
+  );
+  const runners = calls.map((call) => ({ call, by: "main" }));
+  // toolbar and hint 2 + summary 1 + three rows of head and source 2 each
+  expect(runnerRowsWantedOf(runners)).toBe(9);
+  const many = Array.from({ length: 40 }, () => runners[0]);
+  expect(runnerRowsWantedOf(many.filter((one) => one !== undefined))).toBe(30);
+});
+
+test("rowsWantedFor reads the view: groups by default, runners when set", () => {
+  const calls = [callOf({ id: "m1" }), callOf({ id: "r1", runner: "pi" })];
+  const state = { view: "agents", calls, agents: AGENTS, folds: {}, now: 0 };
+  // toolbar and hint 2 + main's header 1 + two rows of 2
+  expect(rowsWantedFor({ ...state, view: "agents" })).toBe(7);
+  // toolbar, hint and summary 3 + one runner row of 2, up to the minimum
+  expect(rowsWantedFor({ ...state, view: "runners" })).toBe(6);
 });

@@ -15,6 +15,9 @@ export type ShellStatus =
 /** An external agent CLI a Bash call runs. */
 export type ShellRunner = "codex" | "pi" | "devin" | "ocr";
 
+/** What the pane lists: every call by agent, or only the external runners. */
+export type ShellView = "agents" | "runners";
+
 /** One Bash call of the session, its liveness and its outcome. */
 export interface ShellCall {
   readonly id: string;
@@ -68,6 +71,7 @@ declare module "claude-code" {
       calls: readonly ShellCall[];
       agentInfo: ShellAgents;
       folds: Readonly<Record<string, boolean>>;
+      view: ShellView;
       now: number;
       isOpen: boolean;
       selected: string;

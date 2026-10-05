@@ -7,13 +7,13 @@
 import type { AgentInfo, EngineInterface, Register } from "claude-code";
 import { atom, read, update } from "claude-code";
 
-import type { ShellAgents, ShellCall } from "../types";
+import type { ShellAgents, ShellCall, ShellView } from "../types";
 import { backfilled, merged, type MessageRow } from "./model/backfill.ts";
 import { classified, hasLive, polled, tailed } from "./model/calls.ts";
 import { type Config, configOf } from "./model/config.ts";
 import { statusLineOf } from "./model/format.ts";
-import { agentTableOf, groupsOf } from "./model/groups.ts";
-import { rowsWantedOf } from "./model/pane-items.ts";
+import { agentTableOf } from "./model/groups.ts";
+import { rowsWantedFor } from "./model/pane-items.ts";
 import { isTailDue, tailPathOf, watchedOf } from "./model/poll.ts";
 import { onRender } from "./pane.tsx";
 import { onClose, onCommand, PANE } from "./slash-command.ts";
@@ -45,6 +45,10 @@ const NO_FOLDS: Readonly<Record<string, boolean>> = {};
 const foldsAtom = atom(
   { plugin: "agent-shell-watch", key: "folds" } as const,
   NO_FOLDS,
+);
+const viewAtom = atom(
+  { plugin: "agent-shell-watch", key: "view" } as const,
+  "agents" as ShellView,
 );
 const openAtom = atom(
   { plugin: "agent-shell-watch", key: "isOpen" } as const,
@@ -158,24 +162,26 @@ const poll = async ($: Engine, config: Config): Promise<void> => {
 // The person's last choice outlives the session in $.store; openOnStart is
 // the default until they have made one.
 const restore = async ($: Engine, config: Config): Promise<void> => {
+  const view = await $.store.get("view");
+  if (view === "agents" || view === "runners") {
+    await update($, viewAtom, () => view);
+  }
   const stored = await $.store.get("paneOpen");
   const isOpen = typeof stored === "boolean" ? stored : config.openOnStart;
   if (!isOpen) {
     return;
   }
-  const rows = rowsWantedOf(
-    groupsOf(
-      await read($, callsAtom),
-      await read($, agentsAtom),
-      await $.clock.now(),
-    ),
-    await read($, foldsAtom),
-  );
   await $.ui.open({
     id: PANE,
     title: "shell-watch",
     columns: config.columns,
-    rows,
+    rows: rowsWantedFor({
+      view: await read($, viewAtom),
+      calls: await read($, callsAtom),
+      agents: await read($, agentsAtom),
+      folds: await read($, foldsAtom),
+      now: await $.clock.now(),
+    }),
   });
   await update($, openAtom, () => true);
 };
@@ -232,8 +238,8 @@ export const register: Register = (on, options) => {
     await $.command.register({
       name: PANE,
       description:
-        "Live Bash calls, background tasks and runner runs (clear|stop)",
-      argumentHint: "[clear|stop]",
+        "Live Bash calls, background tasks and runner runs (runners|agents|clear|stop)",
+      argumentHint: "[runners|agents|clear|stop]",
       immediate: true,
     });
     $.clock.every(TICK_MS, () => {
