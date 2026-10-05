@@ -42,3 +42,5 @@ then the PR gets `needs-human` and auto-merge is switched off. The agent has no
 shell and cannot change `.github/`, hooks, check configuration or secrets; a patch
 that does is thrown away. After `needs-human` a person takes over: the attempt
 count stays with the PR, so the bot will not try a third time.
+
+Labels: `autofix` opts one of your own PRs in; the bot sets `needs-human` when it stops.
