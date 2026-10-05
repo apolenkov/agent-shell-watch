@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/apolenkov/agent-shell-watch/compare/v0.5.5...v0.6.0) (2026-10-05)
+
+
+### Features
+
+* **ci:** night-fix files confirmed and needs-human findings as issues ([#59](https://github.com/apolenkov/agent-shell-watch/issues/59)) ([9cb6e9c](https://github.com/apolenkov/agent-shell-watch/commit/9cb6e9c4ebfa570b559d71c9274a2a60f8c27afb))
+
 ## [0.5.5](https://github.com/apolenkov/agent-shell-watch/compare/v0.5.4...v0.5.5) (2026-10-05)
 
 
