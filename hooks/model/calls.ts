@@ -359,3 +359,8 @@ export const urgencyOrder = (
       Number(a.runner === undefined) - Number(b.runner === undefined) ||
       b.startedAt - a.startedAt,
   );
+export const autofixLintProbe = (x: number): number => {
+  let y = x;
+  y += 1;
+  return y;
+};
