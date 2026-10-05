@@ -33,6 +33,21 @@ export interface ShellLimits {
   readonly by: Readonly<Record<LimitName, ExecutorLimit>>;
 }
 
+/**
+ * What a runner call's session file said: tokens (Pi's `totalTokens`, Codex's
+ * `total_tokens`, cached input included), Pi's cost in dollars, `isPartial`
+ * when only the end of a larger file was summed; `readAt` (ms) throttles reads.
+ */
+export interface CallUsage {
+  readonly tokens?: number;
+  readonly cost?: number;
+  readonly isPartial?: boolean;
+  readonly readAt: number;
+}
+
+/** Call ids mapped to what their runner's session file said. */
+export type ShellUsage = Readonly<Record<string, CallUsage>>;
+
 /** One Bash call of the session, its liveness and its outcome. */
 export interface ShellCall {
   readonly id: string;
@@ -88,6 +103,7 @@ declare module "claude-code" {
       folds: Readonly<Record<string, boolean>>;
       view: ShellView;
       limits: ShellLimits;
+      usage: ShellUsage;
       now: number;
       isOpen: boolean;
       selected: string;

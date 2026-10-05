@@ -14,7 +14,11 @@ export interface World {
   readonly rows: (number | undefined)[];
   /** What `$.fs.read` answers by path; a path not in it is missing. */
   readonly texts: Map<string, string>;
-  /** What `$.fs.list` answers by directory; one not in it is missing. */
+  /**
+   * What `$.fs.list` answers by directory; one not in it is missing. Entries
+   * hold the real size and mtime: the mock lists 0 for any but a file, and
+   * `$.fs.stat` answers with the real ones.
+   */
   readonly listings: Map<string, FsEntry[]>;
   /** Every path `$.fs.read` was asked for, in order. */
   readonly reads: string[];
@@ -92,10 +96,18 @@ export const world = (
   }));
   on("fs.stat", (_$, e) => {
     const file = seen.files.get(e.path);
-    if (file === undefined) {
+    if (file !== undefined) {
+      return { value: { kind: "file", isLink: false, ...file } };
+    }
+    // What a listing holds under that path, with its real size and mtime.
+    const slash = e.path.lastIndexOf("/");
+    const listed = seen.listings
+      .get(e.path.slice(0, slash))
+      ?.find((entry) => entry.name === e.path.slice(slash + 1));
+    if (listed === undefined) {
       throw new Error(`ENOENT: ${e.path}`);
     }
-    return { value: { kind: "file", isLink: false, ...file } };
+    return { value: listed };
   });
   mock.env(on, { HOME: "/home/t" });
   on("fs.read", (_$, e) => {
@@ -111,7 +123,13 @@ export const world = (
     if (entries === undefined) {
       throw new Error(`ENOENT: ${e.path}`);
     }
-    return { value: entries };
+    // As the engine answers: size and mtimeMs are 0 for anything but a
+    // regular file; `$.fs.stat` has the real ones.
+    return {
+      value: entries.map((entry) =>
+        entry.kind === "file" ? entry : { ...entry, size: 0, mtimeMs: 0 },
+      ),
+    };
   });
   on("process.run", (_$, e) => {
     seen.runs.push(e.argv);

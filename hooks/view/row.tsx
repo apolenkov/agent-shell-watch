@@ -16,6 +16,7 @@ import {
   tailFit,
   type Visible,
 } from "../model/layout.ts";
+import { tagOf } from "../model/usage.ts";
 
 /** The elements the pane draws with, on every surface that has a pane. */
 export type Kit = Pick<Elements["terminal"], "Box" | "Button" | "Text">;
@@ -58,8 +59,8 @@ const NOTE_INDENT = 6;
 // `[1 ▸] ● ` before the state, a gap before the label, `[s stop]` after it.
 const HEAD_PREFIX = 9;
 const STOP_WIDTH = 9;
-// The longest `← by` tag a runner row's head spends on its starter.
-const BY_MAX = 32;
+// The least the head keeps for the call's name before the tag is shortened.
+const NAME_MIN = 12;
 /** How many leading lines get a digit hotkey. */
 const HOTKEYS = 9;
 
@@ -91,6 +92,8 @@ export interface Row {
   readonly index: number;
   /** The agent that started the call, said in the head when set. */
   readonly by?: string;
+  /** What the call spent (`23k tok · $0.002`), said after `by`. */
+  readonly usage?: string;
 }
 
 /**
@@ -143,18 +146,18 @@ const stopOf = (
 const headRowOf = (
   kit: Readonly<Kit>,
   { view, act, stopKey }: RowContext,
-  { call, index, by }: Row,
+  { call, index, by, usage = "" }: Row,
 ): Readonly<RenderElement> => {
   const { Box, Button, Text } = kit;
   const state = fit(stateOf(call, view.now), view.columns - HEAD_PREFIX);
-  // The runners view has no group header: the row names who started it.
-  const tag = by === undefined ? "" : `← ${fit(oneLine(by), BY_MAX)}`;
-  const room =
-    view.columns -
-    HEAD_PREFIX -
-    state.length -
-    (canStop(call) ? STOP_WIDTH : 0) -
-    (tag === "" ? 0 : tag.length + 1);
+  // The runners view has no group header: the row names who started it and
+  // what it spent; short of room the spending goes first, then `by` is cut.
+  const spent = HEAD_PREFIX + state.length + (canStop(call) ? STOP_WIDTH : 0);
+  const tag =
+    by === undefined
+      ? ""
+      : tagOf(oneLine(by), usage, view.columns - spent - NAME_MIN - 1);
+  const room = view.columns - spent - (tag === "" ? 0 : tag.length + 1);
   return (
     <Box flexDirection="row" gap={1}>
       <Button
