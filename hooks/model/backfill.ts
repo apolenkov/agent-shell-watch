@@ -141,7 +141,7 @@ export const merged = (
         const own = byId.get(call.id);
         return own === undefined ? call : reconciled(own, call);
       }),
-    ...known.filter((call) => !rebuiltIds.has(call.id)),
+    ...known.filter((call) => !rebuiltIds.has(call.id) && !gone.has(call.id)),
   ];
   return trimmed(ordered, max);
 };
