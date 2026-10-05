@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.4](https://github.com/apolenkov/agent-shell-watch/compare/v0.5.3...v0.5.4) (2026-10-05)
+
+
+### Bug Fixes
+
+* **agent-shell-watch:** read a background runner's verdict past the exit note ([#51](https://github.com/apolenkov/agent-shell-watch/issues/51)) ([f03989a](https://github.com/apolenkov/agent-shell-watch/commit/f03989a4e96996649dd6a650b73b5061d4561d3d))
+* **ci:** give dispatch and scheduled night-fix runs their own concurrency slots ([#52](https://github.com/apolenkov/agent-shell-watch/issues/52)) ([fe8b38e](https://github.com/apolenkov/agent-shell-watch/commit/fe8b38ea3c1deec5637b1ecfd21d4183e6036c03))
+* **repo:** night-review also reviews a PR that auto-merge already landed, and on demand ([#50](https://github.com/apolenkov/agent-shell-watch/issues/50)) ([d3a2948](https://github.com/apolenkov/agent-shell-watch/commit/d3a2948f8f354c937a4466ae5e9dbc227be04c96))
+
 ## [0.5.3](https://github.com/apolenkov/agent-shell-watch/compare/v0.5.2...v0.5.3) (2026-10-05)
 
 
