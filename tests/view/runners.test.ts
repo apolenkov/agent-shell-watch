@@ -135,9 +135,9 @@ test("r re-opens the pane with the rows the other view needs", async ($, on) => 
   await $.command.run(RUN);
   const pane = await paneOf($, "terminal");
   await pane.press({ key: "view" });
-  // toolbar, hint and summary 3 + the failed devin (head, source, note) 3 +
-  // the live codex (head, source) 2
-  expect(seen.rows.at(-1)).toBe(8);
+  // toolbar, hint, summary and limits 4 + the failed devin (head, source,
+  // note) 3 + the live codex (head, source) 2
+  expect(seen.rows.at(-1)).toBe(9);
   expect(seen.focused.at(-1)).toBe(true);
   await pane.press({ key: "view" });
   // toolbar and hint 2 + main's header 1 + codex 2 + ls 3 (head, source,
@@ -153,7 +153,7 @@ test("/shell-watch runners | agents | bare: sets the view, opens, bare keeps it"
   expect(await view()).toBe("r runners");
   const answer = await $.command.run({ ...RUN, args: "runners" });
   expect(seen.opened).toEqual(["shell-watch"]);
-  expect(seen.rows).toEqual([8]);
+  expect(seen.rows).toEqual([9]);
   expect(answer.text).toContain("keys on the pane");
   expect(await view()).toBe("r agents");
   expect(seen.stored.get("view")).toBe("runners");

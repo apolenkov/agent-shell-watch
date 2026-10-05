@@ -18,6 +18,21 @@ export type ShellRunner = "codex" | "pi" | "devin" | "ocr";
 /** What the pane lists: every call by agent, or only the external runners. */
 export type ShellView = "agents" | "runners";
 
+/** The executors whose subscription limits the runners view shows. */
+export type LimitName = "devin" | "pi" | "codex";
+
+/** One executor's limit: blocked until a time (ms), Codex's window use (%). */
+export interface ExecutorLimit {
+  readonly blockedUntil?: number;
+  readonly percent?: number;
+}
+
+/** What the last limits read found; `readAt` (ms) absent before the first. */
+export interface ShellLimits {
+  readonly readAt?: number;
+  readonly by: Readonly<Record<LimitName, ExecutorLimit>>;
+}
+
 /** One Bash call of the session, its liveness and its outcome. */
 export interface ShellCall {
   readonly id: string;
@@ -72,6 +87,7 @@ declare module "claude-code" {
       agentInfo: ShellAgents;
       folds: Readonly<Record<string, boolean>>;
       view: ShellView;
+      limits: ShellLimits;
       now: number;
       isOpen: boolean;
       selected: string;

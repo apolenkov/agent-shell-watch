@@ -87,8 +87,9 @@ test("the runners view asks for chrome, the summary line and each row", () => {
     callOf({ id: `r${String(index)}`, runner: "pi" }),
   );
   const runners = calls.map((call) => ({ call, by: "main" }));
-  // toolbar and hint 2 + summary 1 + three rows of head and source 2 each
-  expect(runnerRowsWantedOf(runners)).toBe(9);
+  // toolbar and hint 2 + summary and limits lines 2 + three rows of head and
+  // source 2 each
+  expect(runnerRowsWantedOf(runners)).toBe(10);
   const many = Array.from({ length: 40 }, () => runners[0]);
   expect(runnerRowsWantedOf(many.filter((one) => one !== undefined))).toBe(30);
 });
@@ -98,6 +99,6 @@ test("rowsWantedFor reads the view: groups by default, runners when set", () => 
   const state = { view: "agents", calls, agents: AGENTS, folds: {}, now: 0 };
   // toolbar and hint 2 + main's header 1 + two rows of 2
   expect(rowsWantedFor({ ...state, view: "agents" })).toBe(7);
-  // toolbar, hint and summary 3 + one runner row of 2, up to the minimum
+  // toolbar, hint, summary and limits 4 + one runner row of 2 = 6
   expect(rowsWantedFor({ ...state, view: "runners" })).toBe(6);
 });

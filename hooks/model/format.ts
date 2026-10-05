@@ -239,14 +239,19 @@ const countsOf = (rest: readonly ShellCall[]): readonly string[] =>
  * The always-on line: the most urgent call in full, the rest counted.
  * @param calls the list
  * @param now the clock's time
- * @param agents the known agents, to say whose the leading call is
- * @returns the line, or undefined when nothing runs or recently failed
+ * @param context the known agents, to say whose the leading call is, and the
+ *   executors whose subscription limit is active now
+ * @returns the line, or undefined when nothing runs, recently failed or is blocked
  */
 export const statusLineOf = (
   calls: readonly ShellCall[],
   now: number,
-  agents: OwnerTable = {},
+  context: Readonly<{
+    agents?: OwnerTable;
+    blocked?: readonly string[];
+  }> = {},
 ): string | undefined => {
+  const { agents = {}, blocked = [] } = context;
   const shown = urgencyOrder(
     calls.filter(
       (call) =>
@@ -257,10 +262,15 @@ export const statusLineOf = (
   );
   const [head, ...rest] = shown;
   const owner = cut(ownerOf(head?.agentId ?? MAIN, agents), OWNER_MAX);
-  return head === undefined
+  const limit = blocked.length > 0 ? [`⏳ ${blocked.join(", ")} limit`] : [];
+  const segments =
+    head === undefined
+      ? []
+      : [
+          SEGMENT[head.status](head, now, `${owner} · ${nameOf(head)}`),
+          ...countsOf(rest),
+        ];
+  return segments.length + limit.length === 0
     ? undefined
-    : [
-        SEGMENT[head.status](head, now, `${owner} · ${nameOf(head)}`),
-        ...countsOf(rest),
-      ].join(" · ");
+    : [...segments, ...limit].join(" · ");
 };

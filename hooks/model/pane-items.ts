@@ -25,6 +25,8 @@ export interface PaneLayout extends Pick<Visible, "isCompact" | "detailRoom"> {
 }
 
 const CHROME = 2;
+// The runners view's summary line and limits line.
+const SUMMARY = 2;
 const ROWS_MIN = 6;
 const ROWS_MAX = 30;
 
@@ -91,12 +93,13 @@ export const rowsWantedOf = (
 
 /**
  * The body rows to ask for in the runners view: the toolbar, the hint, the
- * summary line, and every runner in full, 6 to 30.
+ * summary and limits lines, and every runner in full, 6 to 30.
  * @param runners the runners
  * @returns the rows
  */
 export const runnerRowsWantedOf = (runners: readonly Runner[]): number => {
-  const full = CHROME + 1 + sumOf(runners.map(({ call }) => rowsOf(call, "")));
+  const full =
+    CHROME + SUMMARY + sumOf(runners.map(({ call }) => rowsOf(call, "")));
   return Math.min(ROWS_MAX, Math.max(ROWS_MIN, full));
 };
 

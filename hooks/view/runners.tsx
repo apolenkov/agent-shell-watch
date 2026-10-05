@@ -4,10 +4,11 @@
  */
 import type { RenderElement } from "claude-code";
 
-import type { ShellCall } from "../../types";
+import type { ShellCall, ShellLimits } from "../../types";
 import { isLive } from "../model/calls.ts";
 import type { AgentTable } from "../model/groups.ts";
 import { fit, visibleOf } from "../model/layout.ts";
+import { blockedOf, limitsLineOf } from "../model/limits.ts";
 import { type Runner, runnersOf } from "../model/runners.ts";
 import {
   canStop,
@@ -22,6 +23,8 @@ import {
 export interface RunnersView extends RowView {
   readonly calls: readonly ShellCall[];
   readonly agents: AgentTable;
+  /** What the last read of the executors' subscription limits found. */
+  readonly limits: ShellLimits;
   /** The pane body's height in rows (`e.props.scroll.bodyRows`). */
   readonly rows: number;
   /** Whether the pane holds the keyboard (`e.props.isFocused`). */
@@ -38,8 +41,8 @@ export interface RunnersActions extends RowActions {
 
 /** The toolbar and the hint line around the lines. */
 export const CHROME_ROWS = 2;
-// The summary line under the toolbar.
-const SUMMARY_ROWS = 1;
+// The summary line and the limits line under the toolbar.
+const SUMMARY_ROWS = 2;
 const HINT_FOCUSED = "1–9 open · r agents · c clear · q close · Esc → prompt";
 const HINT_UNFOCUSED = "/shell-watch → keys";
 
@@ -68,6 +71,23 @@ const summaryLineOf = (
   );
 };
 
+const limitsLineElementOf = (
+  kit: Readonly<Kit>,
+  view: RunnersView,
+): Readonly<RenderElement> => {
+  const { Text } = kit;
+  const isBlocked = blockedOf(view.limits, view.now).length > 0;
+  return (
+    <Text
+      dimColor={!isBlocked}
+      wrap="truncate-end"
+      {...(isBlocked && { color: "yellow" })}
+    >
+      {fit(limitsLineOf(view.limits, view.now), view.columns)}
+    </Text>
+  );
+};
+
 const toolbarOf = (
   kit: Readonly<Kit>,
   act: RunnersActions,
@@ -89,7 +109,7 @@ const toolbarOf = (
 };
 
 /**
- * The runners view's tree: toolbar (no fold), the summary line, one row per
+ * The runners view's tree: toolbar (no fold), the summary and limits lines, one row per
  * runner as many as fit, and its own hint.
  * @param kit the surface's Box, Button and Text
  * @param view the calls, the agents and the pane's own state
@@ -121,6 +141,7 @@ export const runnersTree = (
     <Box flexDirection="column">
       {toolbarOf(kit, act)}
       {summaryLineOf(kit, runners, view.columns)}
+      {limitsLineElementOf(kit, view)}
       {runners
         .filter(({ call }) => shown.has(call.id))
         .map(({ call, by }, index) => rowOf(kit, context, { call, index, by }))}
