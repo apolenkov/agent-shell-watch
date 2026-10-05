@@ -47,7 +47,9 @@ fi
 # Captured, not piped into `grep -q`: its early exit would SIGPIPE the producer.
 foreign=$(jq -r '.packages[].resolved // empty' package-lock.json | grep -v '^https://registry.npmjs.org/' || true)
 [ -z "$foreign" ] || reject "the patch points package-lock.json outside the npm registry"
-links=$(git diff --cached --raw --no-renames | grep '^:[0-7]* 120000' || true)
-[ -z "$links" ] || reject "the patch adds a symlink"
+links=$(git diff --cached --raw --no-renames | grep -E '^:[0-7]* (120000|160000)' || true)
+[ -z "$links" ] || reject "the patch adds a symlink or a submodule"
+bin=$(git diff --cached --numstat | grep '^-' || true)
+[ -z "$bin" ] || reject "the patch adds a binary file"
 read -r files lines < <(git diff --cached --numstat | awk '{n++; l+=$1+$2} END {print n+0, l+0}')
 { [ "$files" -le 25 ] && [ "$lines" -le 600 ]; } || reject "the patch is too large ($files files, $lines lines)"

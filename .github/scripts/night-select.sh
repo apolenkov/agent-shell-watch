@@ -23,6 +23,7 @@ jq -c --argjson cap "$cap" '
     | select((.path | type) == "string" and (.path | test("^[A-Za-z0-9._/@+-]+$")) and (.path | startswith("/") | not) and (.path | test("(^|/)\\.\\.(/|$)") | not))
     | select((.start_line | type) == "number" and (.end_line | type) == "number" and .start_line >= 1 and .end_line >= .start_line)
     | select((.path | endswith("package-lock.json")) | not)
+    | select((.path | startswith("tests/")) | not)
     | {path, start_line: (.start_line | floor), end_line: (.end_line | floor), severity, category,
        content: (.content | clip), existing_code: (.existing_code | clip), suggestion_code: (.suggestion_code | clip)} ]
   | sort_by(if .severity == "critical" then 0 else 1 end)

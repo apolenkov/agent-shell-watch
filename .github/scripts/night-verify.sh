@@ -3,7 +3,7 @@
 #   usage: NIGHT_ID=<12 hex> night-verify.sh repro|fixed
 #   repro  normalizes the agent's verdict.json; for `confirmed` runs the reproduction
 #          test, which must FAIL on an assertion (not on a syntax or import error)
-#   fixed  after the fixer: the reproduction test must pass, then the whole `npm test`
+#   fixed  after the fixer: the reproduction test must pass, then the whole `npm run check`
 # The test code is the agent's, so it runs in a copy of the tree and the workspace
 # stays clean for the patch. Writes verdict.json {id,status,evidence,lines,reason}
 # and repro.log, and the step output `status`.
@@ -84,6 +84,8 @@ evidence=$(jq -r .evidence verdict.json)
 # Something besides the reproduction must have changed.
 changed=$(git -c core.hooksPath=/dev/null -c core.fsmonitor=false status --porcelain --untracked-files=all | grep -v -E "^.. (tests/night-fix/$id/|verdict|finding\.json|repro\.|fixed-tests\.log|agent-|fix\.patch)" || true)
 [ -n "$changed" ] || { verdict needs-human "the fixer proposed no change" "$evidence"; exit 0; }
+# The required check includes prettier: format the reproduction test (no semantics).
+npx prettier --write "$test_dir" > /dev/null || true
 rc=0
 run_repro || rc=$?
 [ "$rc" -eq 0 ] || { verdict needs-human "fix does not make the reproduction pass" "$evidence
@@ -91,8 +93,8 @@ run_repro || rc=$?
 $(tail -n 40 repro.log)"; exit 0; }
 dst=$(copy_tree full)
 rc=0
-(cd "$dst" && timeout 15m npm test 2>&1) > fixed-tests.log || rc=$?
-[ "$rc" -eq 0 ] || { tail -n 400 fixed-tests.log | cut -c1-400 > repro.log; verdict needs-human "fix breaks tests" "$evidence
---- npm test (tail)
+(cd "$dst" && timeout 20m npm run check 2>&1) > fixed-tests.log || rc=$?
+[ "$rc" -eq 0 ] || { tail -n 400 fixed-tests.log | cut -c1-400 > repro.log; verdict needs-human "fix fails check" "$evidence
+--- npm run check (tail)
 $(tail -n 40 repro.log)"; exit 0; }
-verdict confirmed "the reproduction passes with the fix, npm test is green" "$evidence"
+verdict confirmed "the reproduction passes with the fix, npm run check is green" "$evidence"
