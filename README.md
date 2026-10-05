@@ -21,50 +21,59 @@ through the shell: Codex, Pi, Devin and OpenCodeReview (`ocr`).
 An always-on status line while anything runs, or a call failed in the last
 2 minutes. The most urgent call leads (hung, failed, quiet, running; a runner
 before a plain shell), the rest are counted as `+N hung`, `+N failed`,
-`+N quiet`, `+N bg`, `+N running`. Claude Code labels it with the plugin's
-name:
+`+N quiet`, `+N bg`, `+N running`. The leading call says whose it is: `main`
+or the subagent's type. Claude Code labels the line with the plugin's name:
 
 ```
-agent-shell-watch: ◐ codex · Review diff 2:13 · output 4s ago · › applying patch src/a.ts · +1 bg
-agent-shell-watch: ⚠ quiet 6m pi · Fix flaky test 7:40 · +2 running
-agent-shell-watch: ◐ Wait 0:45 · no output · 45s
-agent-shell-watch: ⚠ hung 12m devin · Port module
-agent-shell-watch: ✗ Typecheck exit 2 · +1 bg
-agent-shell-watch: ✗ pi · Fix flaky test RATE_LIMIT 1790000000
+agent-shell-watch: ◐ main · codex · Review diff 2:13 · output 4s ago · › applying patch src/a.ts · +1 bg
+agent-shell-watch: ⚠ quiet 6m pi-runner · pi · Fix flaky test 7:40 · +2 running
+agent-shell-watch: ◐ main · Wait 0:45 · no output · 45s
+agent-shell-watch: ⚠ hung 12m main · Wait loop · +1 failed
+agent-shell-watch: ✗ main · Typecheck exit 2 · +1 bg
+agent-shell-watch: ✗ general-purpose · devin · Review spec RATE_LIMIT 1790000000
 ```
 
-`/shell-watch` opens the pane. Live calls come first (hung, quiet, running),
-then failures, finished calls and denied ones, the newest first in each; what
-does not fit the pane's height becomes a dim `+N older` line, so the newest
-and live rows never need scrolling. Opened above the prompt, the pane asks for
-the rows its calls need (6 to 30); short of room, rows shrink to one line, but
-a running runner keeps its last output line. Each row is three lines: state before the
-label (a narrow pane cuts the label, never the time or outcome), where it ran
-and its command, and its last output line (a failure's last error in red, a
-denial's reason, dim). Every line is one line, cut to the pane's width.
+`/shell-watch` opens the pane, grouped by who made the calls: `main` (this
+session's own loop) and each subagent (`type: description`; one started by
+another subagent ends `↳ <its parent>`). A runner is a row in the group of the
+agent that ran it. Each group's header carries its rollup: the worst live
+call (hung, quiet, running), a failure in the last 2 minutes, the agent's own
+status (`✗` when it failed), or a dim `◌ idle` for an agent at rest. The most
+urgent group comes first; finished groups start folded, a folded header
+shows its leading call's last line. Inside a group, live calls come first,
+then failures, finished calls and denied ones, the newest first in each;
+what does not fit the pane's height becomes a dim `+N older` line. Opened
+above the prompt, the pane asks for the rows it needs (6 to 30); short of
+room, rows shrink to one line, but a running runner keeps its last output
+line. A row is its state before the label (a narrow pane cuts the label,
+never the time or outcome), its command (`bg ·` for a background one), and
+its last output line (a failure's last error in red, a denial's reason, dim).
 
 ```
-[ c clear ] [ q close ]
-[ 1 ▸ ] ◐ 0:51 output 1s ago  Count steps  [ s stop ]
-      bg · main · for i in $(seq 40); do echo step $i; sleep 2; done
-      › step 26
-[ 2 ▸ ] ✗ 0:03 exit 2  Typecheck
-      main · tsc -p .
-      ✗ src/a.ts(3,1): error TS2322: Type 'string' is not assignable…
+[ f fold ] [ c clear ] [ q close ]
+[ 1 ▾ ] ⚠ main · 3 calls · 1 live
+[ 2 ▸ ] ⚠ 9:12 hung · no output · 9m  Wait loop  [ s stop ]
+        bg · sleep 3600
 [ 3 ▸ ] ● 0:01 exit 0  List files
-      main · ls -1 | head -3
-      › README.md
-+4 older
-1–9 open · c clear · q close · Esc → prompt
+        ls -1 | head -3
+        › README.md
+[ 4 ▾ ] ✗ general-purpose: Review spec · 2 calls
+[ 5 ▸ ] ✗ 0:03 RATE_LIMIT 1790000000  devin · Review spec
+        devin -p 'review the spec' 2>&1 | tee /tmp/d.log
+        ✗ RATE_LIMIT 1790000000
+[ 6 ▸ ] ● Explore: Find callers · 4 calls · › 12 matches
+1–9 open · f fold · c clear · q close · Esc → prompt
 ```
 
 `/shell-watch` gives the pane the keyboard (again, if it already is open:
 it refocuses); Esc hands the keys back to the prompt and the pane stays. The
-first row's `[ 1 ▸ ]` holds the focus, so Enter expands the most important call.
-Each button shows its key: `1`–`9` expand or collapse that row (the full
-command, last 40 lines, stderr, output and watch files), `c` clear finished calls, `s` stop the running background
-call (when there is one), `q` close. Tab walks the buttons, Enter presses.
-The pane remembers across sessions whether you left it open.
+first line's `[ 1 ▾ ]` holds the focus. Each button shows its key: `1`–`9`
+on a header fold or open its group, on a row expand or collapse it (the full
+command, last 40 lines, stderr, output and watch files); `f` folds every
+group, or opens them all when all are folded; `c` clears finished calls, `s`
+stops the running background call (when there is one), `q` closes. Tab
+walks the buttons, Enter presses. The pane remembers across sessions whether
+you left it open.
 
 Glyphs: `◐` running, `●` done, `✗` failed, `⚠` quiet or hung, `○` stopped,
 dim `○ denied` for a call refused before it ran (a permission rule, a hook,

@@ -36,7 +36,8 @@ Enter
 Sleep 4s
 
 Sleep 6s
-Type "1"
+# 1 is main's group header; 2 opens its first row (the Codex review).
+Type "2"
 Sleep 8s
 
 Escape
