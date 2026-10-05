@@ -79,8 +79,13 @@ must not have moved on; no `needs-human` label; the only red job must be `check`
 
 Why this is safe for Dependabot and the other same-repo sources:
 
-- A `workflow_run` runs in the context of the base repository, so a Dependabot PR gets the
-  environment secret and a write token (verified on PR #21). The same trigger gives a fork nothing:
+- The factory runs on `workflow_run`, not on `pull_request`, and that is not an accident. GitHub's
+  documentation for the trigger says such a run uses the default branch and can reach secrets and
+  write tokens even if the run it follows could not. A `pull_request` run started by Dependabot gets
+  only the separate Dependabot secrets and a read-only token; the `workflow_run` path is outside that
+  rule, so a Dependabot PR gets the environment secret and a write token (verified for `ci-autofix` on
+  PR #21). The price of that right is the next two paragraphs: a run with write rights reads the
+  content of a foreign diff. The same trigger gives a fork nothing:
   the gate stops it, and a fork's `pull_request` run has no secrets anyway.
 - The `fix` job checks out the PR head but never runs its code: no `npm ci`, no scripts; opencode is
   installed with `--ignore-scripts` from a binary package pinned by version and registry integrity.
@@ -220,8 +225,10 @@ schedule; it is run by hand after each Dependabot PR and before every rollout st
 ## Not verified live
 
 - A fork's PR being skipped: only by the logic of the gates; no real fork PR has run.
-- `night-review` reading the environment secret on a Dependabot PR (criterion #4 of TASK-282.3); the
-  `ci-autofix` path was verified (PR #21).
+- `night-review` reading the environment secret on a Dependabot PR (criterion #4 of TASK-282.3): by
+  the documentation of `workflow_run` it must work, but that is an inference from the platform, not a
+  run; the `ci-autofix` path was verified (PR #21). Fallback if it fails: also store the secret as a
+  Dependabot secret.
 - The rejection of a bad patch on a cloud runner: tried locally on prepared patches (workflow edit,
   deletion, symlink, size, `tsconfig`, scripts, `.npmrc`, foreign registry), never in Actions.
 - The stop switches above, and the behaviour at an exhausted subscription.
