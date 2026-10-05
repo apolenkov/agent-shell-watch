@@ -164,30 +164,40 @@ and nothing labels it. That is safe but silent; see follow-ups. In `night-fix` t
 
 ## Incidents
 
-An incident is any of: an autofix commit that touches a protected path, changes more than 25 files
-or 600 lines, or lands on `main` outside a PR (`scripts/autofix-report.sh` finds these from the
-commits and the `PROTECTED` list of the workflow, for Dependabot PRs by default and for other authors
-with `AUTHOR=`; the first class only; the other classes below have no detector and are found by hand); a factory write outside a PR branch or
-`night-fix/*`; a merged factory change found to have weakened a test or a check; a secret in an
-artifact, comment or log. Only commits count: the conclusion of a workflow run is no incident evidence (see "Measured so far"),
-and the rollout gate uses nothing else. The detector was proved on the pilot's own commits: with `hooks/*` declared
-protected it reports 7 incidents, without that 0.
+`scripts/autofix-report.sh` reads every PR the bot can touch (Dependabot's, `night-fix`, and the
+owner's `autofix` ones) and reports two things. An **incident** is a broken rule: an autofix commit
+that touches a protected path (a `night-fix` commit may add its own reproduction test under
+`tests/night-fix/<id>/`), changes more than 25 files or 600 lines, or lands on `main` outside a PR;
+a commit of `github-actions[bot]` on a branch that has no PR; secret-like text (token and key
+shapes) in a bot comment, a bot PR body or an autofix commit message. A **suspect** is a commit a
+person has to look at: it makes tests weaker (fewer assertion lines than it removed, a deleted test
+file, an added skip/only/todo, a lint or type suppression). The rollout gate needs 0 incidents and 0
+suspects. Not covered, found by hand: a secret inside a workflow artifact or log, and a change that
+weakens a check without touching tests. Only commits and published text count: the conclusion of a
+workflow run is no incident evidence (see "Measured so far"). The detectors were proved on
+fixtures (`autofix-report.sh --selftest`) and, for the protected-path class, on the pilot's own
+commits: with `hooks/*` declared protected the report finds 9 incidents over the Dependabot,
+`night-fix` and owner PRs, without that 0. The branch and comment detectors have so far only run
+clean on real data.
 
-Stopping the factory (the owner, or the coordinator on the owner's behalf; resume with
-`gh workflow enable`):
+Stopping the factory is one command (the owner, or the coordinator on the owner's behalf):
 
 ```sh
-# the whole factory in one repository: three workflows
-for w in ci-autofix night-review night-fix; do gh workflow disable $w.yml -R apolenkov/<repo>; done
-# independent second switch: every LLM job then fails at its "token is empty" check
-gh secret delete OCR_LLM_AUTH_TOKEN --env ci -R apolenkov/<repo>
-# one PR that must not merge
-gh pr merge <number> -R apolenkov/<repo> --disable-auto
+scripts/factory-stop.sh <repo>            # or --all: every repository that has ci-autofix.yml
+scripts/factory-stop.sh <repo> --resume   # undo
 ```
 
-These switches do not touch `dependabot-automerge.yml`: a stopped factory does not stop a green
-Dependabot PR from merging (disable that workflow too to stop that). Jobs already running finish with
-their token in memory; delete the secret first if a leak is suspected.
+It disables `ci-autofix`, `night-review`, `night-fix` **and `dependabot-automerge`**; switches
+auto-merge off on the open Dependabot, `night-fix` and `autofix` PRs (an armed PR would merge on
+green with the workflows off); cancels their queued and running runs (`--keep-runs` leaves them);
+then reads everything back and exits 1 unless nothing is enabled and nothing is armed. `--dry-run`
+only prints. `--revoke-secret` also deletes `OCR_LLM_AUTH_TOKEN` (every LLM job then fails by itself
+at its "token is empty" check; only the owner can put the token back; use it when a leak is
+suspected, since a cancelled job's token is gone with the runner but a copy may already exist
+elsewhere). It does not touch `ci`, `codeql`, `scorecard` or the release workflow: the checks and
+releases are not the factory, and a green PR the owner armed himself still merges. `--resume` enables
+the workflows again and lists the open factory PRs that now lack auto-merge (re-arm with
+`gh pr merge --auto --squash <n>`); Dependabot's workflow re-arms its own PRs on their next event.
 
 After a stop: write the incident into the backlog (what, which commit, which gate failed), fix the
 gate, change this ADR if a limit moved, then resume. Nothing runs `autofix-report.sh` on a
@@ -242,7 +252,10 @@ schedule; it is run by hand after each Dependabot PR and before every rollout st
   Dependabot secret.
 - The rejection of a bad patch on a cloud runner: tried locally on prepared patches (workflow edit,
   deletion, symlink, size, `tsconfig`, scripts, `.npmrc`, foreign registry), never in Actions.
-- The stop switches above, and the behaviour at an exhausted subscription.
+- The stop switch: the workflow part and the auto-merge part were drilled live on 2026-10-06 (council,
+  a throwaway PR labelled `autofix` with auto-merge armed: stop disarmed it, resume re-enabled the
+  workflows; the PR was closed unmerged). Not exercised: `--all`, `--revoke-secret`, the cancelling of
+  running runs. Also not verified: the behaviour at an exhausted subscription.
 - The environment `ci` has no protection rule and no deployment-branch policy: any workflow on any
   branch of this repository that names `environment: ci` receives the secret. This is safe only
   while the owner is the sole writer; it is a convention, not a barrier.
@@ -257,8 +270,6 @@ schedule; it is run by hand after each Dependabot PR and before every rollout st
   GitHub never started (`night-review` and `ci-autofix` do not).
 - Protect `tests/` in `ci-autofix` as `night-fix` does, or detect weakened assertions.
 - Run `autofix-report.sh` on a schedule and open an issue on the first incident.
-- Let `autofix-report.sh` read every PR of the factory (night-fix, owner PRs with `autofix`), not only
-  Dependabot's; make the stop procedure cover `dependabot-automerge.yml` (TASK-282.07, TASK-282.08).
 - Retry of a job GitHub never started: not added; the one measured case was a GitHub incident, where a
   retry cannot help. Revisit if such losses appear outside an incident.
 - One shared copy of `PROTECTED` and of the opencode pin instead of one per workflow and repository.
