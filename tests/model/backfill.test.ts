@@ -190,3 +190,25 @@ test("a rebuilt call without a duration has an unknown start time", () => {
   expect(calls[0]?.isTimeUnknown).toBeUndefined();
   expect(calls[1]?.isTimeUnknown).toBe(true);
 });
+
+test("a call the state still runs ends as the transcript says it did", () => {
+  const known = [
+    callOf({ id: "u1", label: "mine", startedAt: 5, status: "hung" }),
+    callOf({ id: "u3", label: "waits", status: "hung" }),
+  ];
+  const calls = merged(known, backfilled(ROWS, undefined, 10_000), {
+    max: 10,
+    cleared: [],
+  });
+  const [one, three] = ["u1", "u3"].map((id) =>
+    calls.find((call) => call.id === id),
+  );
+  expect(one).toMatchObject({
+    label: "mine",
+    startedAt: 5,
+    status: "done",
+    exitCode: 0,
+    endedAt: 10_000,
+  });
+  expect(three?.status).toBe("hung");
+});
