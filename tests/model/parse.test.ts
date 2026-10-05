@@ -61,6 +61,16 @@ test("verdict is the last non-empty line when it is a guard line", () => {
   expect(verdictOf(["RATE_LIMIT 1790000000"])).toBe("RATE_LIMIT 1790000000");
   expect(verdictOf(["STALLED silence"])).toBe("STALLED silence");
   expect(verdictOf(["BUSY 42 /t/o.log"])).toBe("BUSY 42 /t/o.log");
+  expect(verdictOf(["WAITING <что>"])).toBe("WAITING <что>");
+  expect(verdictOf(["FAILED <почему>"])).toBe("FAILED <почему>");
+  expect(verdictOf(["out", "WAITING approval for rm -rf", ""])).toBe(
+    "WAITING approval for rm -rf",
+  );
+  expect(verdictOf(["FAILED harness crashed: boom"])).toBe(
+    "FAILED harness crashed: boom",
+  );
+  expect(verdictOf(["WAITING"])).toBeUndefined();
+  expect(verdictOf(["FAILED   "])).toBeUndefined();
   expect(verdictOf(["DONE 0", "more"])).toBeUndefined();
   expect(verdictOf([])).toBeUndefined();
 });

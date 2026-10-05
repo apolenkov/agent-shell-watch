@@ -17,7 +17,8 @@ const PROMPT_WORDS = 6;
 const REDIRECT = /(?:^|\s)1?>>?\s*(?:'([^']+)'|"([^"]+)"|([^\s;&|<>'"]+))/u;
 const LINE_MAX = 200;
 const WATCH_FILE = /--watch-file(?:=|\s+)(?:'([^']*)'|"([^"]*)"|(\S+))/u;
-const VERDICT = /^(?:DONE \d+|RATE_LIMIT \d+|STALLED \S+|BUSY \d+ \S+)$/u;
+const VERDICT =
+  /^(?:DONE \d+|RATE_LIMIT \d+|STALLED \S+|BUSY \d+ \S+|WAITING \S.*|FAILED \S.*)$/u;
 const EXIT_CODE = /^Exit code (\d+)/u;
 const TASK_ID = /<task-id>([^<]+)<\/task-id>/u;
 const TASK_STATUS = /<status>([a-z_]+)<\/status>/u;
@@ -116,7 +117,8 @@ export const promptWordsOf = (command: string): string | undefined => {
 /**
  * The runner guard's verdict: the last non-empty line when it is one.
  * @param lines output lines, oldest first
- * @returns `DONE n`, `RATE_LIMIT epoch`, `STALLED reason`, `BUSY pid file`
+ * @returns `DONE n`, `RATE_LIMIT epoch`, `STALLED reason`, `BUSY pid file`,
+ * `WAITING what`, `FAILED why`
  */
 export const verdictOf = (lines: readonly string[]): string | undefined => {
   const last = lines.findLast((line) => line.trim() !== "")?.trim();
