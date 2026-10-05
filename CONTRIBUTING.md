@@ -27,6 +27,23 @@ agent-shell-watch needs Claude Code 2.1.287+ (mods are on by default). Try it li
 caches type immutability per type, not per rule level, so linting `hooks/` (lite) and
 `hooks/model/` (strict) in one process would make the result depend on file order.
 
+## Live checks (manual)
+
+`npm run eval` runs `claude plugin eval` over `evals/`: each case is a real
+headless (`claude -p`) session with only this plugin loaded. It covers what the
+unit tests cannot: that the hooks module loads in the engine and registers its
+command (`/shell-watch clear` answers), and that a plain Bash turn goes through
+untouched with the mod on. It costs about $0.07 and half a minute.
+
+Locally it needs your Claude login or an API key. In CI the `eval` job runs it
+when the repository has the secret `ANTHROPIC_API_KEY`; without the secret
+(a fork, a Dependabot run, no key yet) the job skips its steps and stays green,
+so until someone adds the key this is a local step, not an automatic check.
+
+It cannot see the status line, the pane or a background runner's verdict (a
+headless session draws none); those are checked by hand in an interactive
+session.
+
 ## Dependency holds
 
 - `typescript` stays on 6.x (6.0.3): `typescript-eslint` 8.71.0, its latest,
