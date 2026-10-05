@@ -44,3 +44,5 @@ that does is thrown away. After `needs-human` a person takes over: the attempt
 count stays with the PR, so the bot will not try a third time.
 
 Labels: `autofix` opts one of your own PRs in; the bot sets `needs-human` when it stops.
+
+The autofix bot never changes workflows, hooks, lint config or the scripts in `package.json`.
