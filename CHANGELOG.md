@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.5.0](https://github.com/apolenkov/agent-shell-watch/compare/v0.4.0...v0.5.0) (2026-10-05)
+
+
+### Features
+
+* **agent-shell-watch:** add the runners view ([#16](https://github.com/apolenkov/agent-shell-watch/issues/16)) ([05e5eef](https://github.com/apolenkov/agent-shell-watch/commit/05e5eefd323d4ac65ac81fb167cfa0037b9ea67d))
+* **agent-shell-watch:** show subscription limits in the runners view ([#19](https://github.com/apolenkov/agent-shell-watch/issues/19)) ([5a5b032](https://github.com/apolenkov/agent-shell-watch/commit/5a5b032c61c90318385d9f59e0f69e62930125ab))
+* **agent-shell-watch:** show tokens and cost of Pi and Codex runners ([#24](https://github.com/apolenkov/agent-shell-watch/issues/24)) ([54879f5](https://github.com/apolenkov/agent-shell-watch/commit/54879f5ea5ff987fe67c5364b7dd00df41649c57))
+
+
+### Bug Fixes
+
+* **agent-shell-watch:** read the guard's WAITING and FAILED verdicts ([#12](https://github.com/apolenkov/agent-shell-watch/issues/12)) ([ad4daa1](https://github.com/apolenkov/agent-shell-watch/commit/ad4daa1f3656cbca49d964e1cafca0cc51303b76))
+
 ## [0.4.0](https://github.com/apolenkov/agent-shell-watch/compare/v0.3.1...v0.4.0) (2026-10-05)
 
 
