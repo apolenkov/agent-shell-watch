@@ -154,3 +154,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md): `npm ci`, then `npm run check`; try it
 live with `claude --plugin-dir .`. Releases are cut by release-please; the
 history before 0.2.0 comes from
 [agent-watch](https://github.com/apolenkov/agent-watch).
+
+`engine-types/claude-code.d.ts` is © Anthropic PBC and not covered by the MIT license; see [engine-types/NOTICE.md](engine-types/NOTICE.md).
