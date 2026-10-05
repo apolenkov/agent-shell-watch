@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/apolenkov/agent-shell-watch/compare/v0.5.1...v0.5.2) (2026-10-05)
+
+
+### Bug Fixes
+
+* **repo:** send the session id OpenCode Go requires in night-review ([#35](https://github.com/apolenkov/agent-shell-watch/issues/35)) ([2dcdd23](https://github.com/apolenkov/agent-shell-watch/commit/2dcdd231c3ce113236a2b5eb98930afae7e8f33c))
+
 ## [0.5.1](https://github.com/apolenkov/agent-shell-watch/compare/v0.5.0...v0.5.1) (2026-10-05)
 
 
