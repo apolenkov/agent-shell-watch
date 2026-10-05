@@ -24,7 +24,7 @@ jq -rn --arg run "${RUN_URL:-}" --arg scan "${SCAN_RUN_URL:-}" \
   | ([$rows[] | select(.status == "refuted")] | length) as $r
   | ([$rows[] | select(.status == "needs-human")] | length) as $h
   | def pct($x): if $n == 0 then "0%" else "\(($x * 100 / $n) | round)%" end;
-  "<!-- night-fix-ids: \($rows | map(select(.reason | IN("the verification did not finish", "the agent wrote no valid verdict.json") | not) | .id) | join(",")) -->",
+  "<!-- night-fix-ids: \($rows | map(select(.reason | IN("the verification did not finish", "the agent wrote no valid verdict.json", "the patch does not apply") | not) | .id) | join(",")) -->",
   "### night-fix run",
   "",
   "Scan: \($scan) · fix run: \($run)",

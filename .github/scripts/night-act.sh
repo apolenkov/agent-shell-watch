@@ -73,7 +73,10 @@ for id in $IDS; do
   [ -s "$dir/fix.patch" ] || { outcome "$id" needs-human "confirmed, but no verified patch" "$evidence"; continue; }
 
   branch="night-fix/$id"
-  git checkout -q -B "$branch" "$SHA"
+  # main may have moved since the gate: the PR starts from its head now, so it
+  # is not BEHIND (strict required checks); a patch that no longer applies stops.
+  git fetch -q --no-tags "https://github.com/${REPO}.git" main
+  git checkout -q -B "$branch" FETCH_HEAD
   rc=0
   why=$(NIGHT_ID=$id PROTECTED="$PROTECTED"$'\n'"verdict*.json" bash "$here/guard-patch.sh" "$dir/fix.patch") || rc=$?
   if [ "$rc" -ne 0 ]; then

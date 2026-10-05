@@ -1,0 +1,6 @@
+#!/bin/sh
+# Stand-in for `devin -p`: it starts, then the guard reports a failure.
+echo "migrating config"
+sleep 2
+echo "FAILED quota exhausted"
+exit 1

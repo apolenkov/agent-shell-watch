@@ -1,8 +1,17 @@
 #!/bin/sh
-# Stand-in for the Codex CLI so the demo is reproducible and costs nothing:
-# it prints review progress the way a real `codex exec review` run does.
+# Stand-in for `codex exec review` so the demo is reproducible and costs
+# nothing: review progress, a rollout with token and rate-limit records the
+# way the real one keeps them, then the guard's verdict.
+dir="$HOME/.codex/sessions/$(date +%Y/%m/%d)"
+mkdir -p "$dir"
+log="$dir/rollout-$(date +%Y-%m-%dT%H-%M-%S)-0000.jsonl"
+reset=$(( $(date +%s) + 7200 ))
+tokens=0
 for f in parser lexer cache api router auth store queue jobs mailer billing search; do
   echo "reviewing src/$f.ts"
-  sleep 3
+  tokens=$((tokens + 3900))
+  printf '{"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"total_tokens":%s}},"rate_limits":{"primary":{"used_percent":62,"resets_at":%s}}}}\n' "$tokens" "$reset" >> "$log"
+  sleep 4
 done
 echo "2 findings"
+echo "DONE 0"

@@ -1,0 +1,12 @@
+#!/bin/sh
+# Stand-in for `pi -p`: a session file with usage records, a few progress
+# lines, then the guard's WAITING verdict.
+dir="$HOME/.pi/agent/sessions/--my-app--"
+mkdir -p "$dir"
+log="$dir/$(date -u +%Y-%m-%dT%H-%M-%S)-000Z_demo.jsonl"
+for step in "reading tests/flaky.test.ts" "found a race in src/queue.ts" "patching src/queue.ts"; do
+  echo "$step"
+  printf '{"type":"message","message":{"role":"assistant","usage":{"totalTokens":7600,"cost":{"total":0.0007}}}}\n' >> "$log"
+  sleep 2
+done
+echo "WAITING approval to edit src/queue.ts"

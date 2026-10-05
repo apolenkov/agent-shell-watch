@@ -13,7 +13,7 @@ name: night-fix
 # the same treatment as a Dependabot PR (required checks, auto-merge, needs-human).
 # The commit carries `Autofix-Attempt: 1`, so ci-autofix has one attempt left.
 # Jobs keep the LLM token apart from every write token:
-#   gate    no secrets; the scan run must be fresh, on main, from schedule/dispatch
+#   gate    no secrets; the scan run must be of main's history, from schedule/dispatch
 #   select  no LLM token; picks up to MAX_FINDINGS, finding text only in files
 #   verify  LLM token, then the agent's test code; read-only repo token
 #   fix     LLM token, then the re-check of the fix; fresh runner, read-only repo token
@@ -110,9 +110,13 @@ jobs:
             .head_branch == "main" and .conclusion == "success" and
             .head_repository.full_name == $repo' <<<"$run")
           [ "$ok" = true ] || { echo "run $RUN_ID is not a successful night-review scan of main from schedule or dispatch"; exit 0; }
-          sha=$(jq -r .head_sha <<<"$run")
+          scan=$(jq -r .head_sha <<<"$run")
           main=$(gh api "repos/$REPO/commits/main" --jq .sha)
-          [ "$sha" = "$main" ] || { echo "stale: the scan is of $sha, main is $main"; exit 0; }
+          # main moves on while a scan runs: work on its current head, as long as
+          # the scanned commit is part of its history.
+          rel=$(gh api "repos/$REPO/compare/$scan...$main" --jq .status)
+          [[ $rel == identical || $rel == ahead ]] || { echo "the scan of $scan is not in main's history ($rel)"; exit 0; }
+          sha=$main
           fresh=$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq '[.artifacts[] | select(.name == "ocr-scan" and (.expired | not))] | length')
           [ "$fresh" -ge 1 ] || { echo "no live ocr-scan artifact"; exit 0; }
           {
