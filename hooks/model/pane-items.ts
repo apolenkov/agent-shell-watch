@@ -2,9 +2,16 @@
  * The pane's lines, grouped: each group's header, then the rows of an open
  * group, fitted to the height.
  */
-import type { ShellCall } from "../../types";
-import { type Folds, type Group, isFolded } from "./groups.ts";
+import type { ShellCall, ShellView } from "../../types";
+import {
+  type AgentTable,
+  type Folds,
+  type Group,
+  groupsOf,
+  isFolded,
+} from "./groups.ts";
 import { rowsOf, type Visible, visibleOf } from "./layout.ts";
+import { type Runner, runnersOf } from "./runners.ts";
 
 /** One line the pane leads with a button: a group's header or a call. */
 export type PaneItem =
@@ -81,3 +88,34 @@ export const rowsWantedOf = (
   const full = CHROME + groups.length + sumOf(rows);
   return Math.min(ROWS_MAX, Math.max(ROWS_MIN, full));
 };
+
+/**
+ * The body rows to ask for in the runners view: the toolbar, the hint, the
+ * summary line, and every runner in full, 6 to 30.
+ * @param runners the runners
+ * @returns the rows
+ */
+export const runnerRowsWantedOf = (runners: readonly Runner[]): number => {
+  const full = CHROME + 1 + sumOf(runners.map(({ call }) => rowsOf(call, "")));
+  return Math.min(ROWS_MAX, Math.max(ROWS_MIN, full));
+};
+
+/** What the pane's height depends on. */
+export interface WantedState {
+  readonly view: ShellView;
+  readonly calls: readonly ShellCall[];
+  readonly agents: AgentTable;
+  readonly folds: Folds;
+  readonly now: number;
+}
+
+/**
+ * The body rows to ask for now: the open view's own count, 6 to 30. The one
+ * place the command, the pane's keys and a restore ask.
+ * @param state the view, the calls, the agents, the folds and the time
+ * @returns the rows
+ */
+export const rowsWantedFor = (state: WantedState): number =>
+  state.view === "runners"
+    ? runnerRowsWantedOf(runnersOf(state.calls, state.agents))
+    : rowsWantedOf(groupsOf(state.calls, state.agents, state.now), state.folds);

@@ -49,9 +49,14 @@ export const COLOR: Readonly<Record<ShellStatus, string>> = {
   nomatch: "gray",
 };
 
-// The group's header names the owner; a row says only where it ran.
-const sourceOf = (call: ShellCall): string =>
-  call.background ? `bg · ${oneLine(call.command)}` : oneLine(call.command);
+// The group's header names the owner; a row says only where it ran. In the
+// runners view there is no header, so a row also says who started it.
+const sourceOf = (call: ShellCall, by?: string): string => {
+  const where = call.background
+    ? `bg · ${oneLine(call.command)}`
+    : oneLine(call.command);
+  return by === undefined ? where : `by ${oneLine(by)} · ${where}`;
+};
 
 /** Cells a row's lines below its head are indented by. */
 const NOTE_INDENT = 6;
@@ -83,10 +88,12 @@ export interface RowContext {
   readonly fit: Pick<Visible, "isCompact" | "detailRoom">;
 }
 
-/** One row as drawn: its call and its place among the shown lines. */
+/** One row as drawn: its call, its place among the shown lines, who started it. */
 export interface Row {
   readonly call: ShellCall;
   readonly index: number;
+  /** The agent that started the call, said on the source line when set. */
+  readonly by?: string;
 }
 
 /**
@@ -195,7 +202,7 @@ const noteRowOf = (
 const bodyOf = (
   kit: Readonly<Kit>,
   { view, fit: room }: RowContext,
-  call: ShellCall,
+  { call, by }: Row,
 ): readonly Readonly<RenderElement>[] => {
   const { Text } = kit;
   const width = view.columns - NOTE_INDENT;
@@ -203,7 +210,7 @@ const bodyOf = (
   if (!isSelected && room.isCompact) {
     return isNoteKept(call) ? noteRowOf(kit, view, call) : [];
   }
-  const source = sourceOf(call);
+  const source = sourceOf(call, by);
   const details = isSelected ? tailFit(detailsOf(call), room.detailRoom) : [];
   return [
     <Text dimColor wrap="truncate-end">
@@ -236,7 +243,7 @@ export const rowOf = (
     <Box key={`call:${row.call.id}`} flexDirection="column">
       {headRowOf(kit, context, row)}
       <Box paddingLeft={NOTE_INDENT} flexDirection="column">
-        {bodyOf(kit, context, row.call)}
+        {bodyOf(kit, context, row)}
       </Box>
     </Box>
   );

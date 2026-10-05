@@ -1,15 +1,14 @@
 /**
  * The pane's drawing: reads the calls and the pane's state, and hands the
- * view its button handlers (fold, clear, close, select, stop).
+ * view its button handlers (fold, view, clear, close, select, stop).
  */
 import type { EngineInterface, RenderElement, RenderInput } from "claude-code";
 import { atom, read, update } from "claude-code";
 
-import type { ShellAgents, ShellCall } from "../types";
+import type { ShellAgents, ShellCall, ShellView } from "../types";
 import { finishedIds, liveOnly, noticed, tailed } from "./model/calls.ts";
 import { configOf } from "./model/config.ts";
-import { groupsOf } from "./model/groups.ts";
-import { rowsWantedOf } from "./model/pane-items.ts";
+import { rowsWantedFor } from "./model/pane-items.ts";
 import { type PaneActions, paneTree } from "./view/pane.tsx";
 
 const NO_CALLS: readonly ShellCall[] = [];
@@ -37,6 +36,10 @@ const foldsAtom = atom(
 const configAtom = atom(
   { plugin: "agent-shell-watch", key: "config" } as const,
   configOf({}),
+);
+const viewAtom = atom(
+  { plugin: "agent-shell-watch", key: "view" } as const,
+  "agents" as ShellView,
 );
 const nowAtom = atom({ plugin: "agent-shell-watch", key: "now" } as const, 0);
 const openAtom = atom(
@@ -106,30 +109,43 @@ const close = async ($: Engine): Promise<void> => {
   await $.ui.close({ id: PANE });
 };
 
-const setFolds = async (
-  $: Engine,
-  keys: readonly string[],
-  isFolded: boolean,
-): Promise<void> => {
-  const folds = await update($, foldsAtom, (known) => ({
-    ...known,
-    ...Object.fromEntries(keys.map((key) => [key, isFolded])),
-  }));
-  // An inline pane got the rows it asked for at open: ask again for what the
-  // groups now open need ("each open sets it anew"), keeping the keyboard.
-  const groups = groupsOf(
-    await read($, callsAtom),
-    await read($, agentsAtom),
-    await $.clock.now(),
-  );
+const reopen = async ($: Engine): Promise<void> => {
   const { columns } = await read($, configAtom);
   await $.ui.open({
     id: PANE,
     title: PANE,
     columns,
-    rows: rowsWantedOf(groups, folds),
+    rows: rowsWantedFor({
+      view: await read($, viewAtom),
+      calls: await read($, callsAtom),
+      agents: await read($, agentsAtom),
+      folds: await read($, foldsAtom),
+      now: await $.clock.now(),
+    }),
     focus: true,
   });
+};
+
+const toggleView = async ($: Engine): Promise<void> => {
+  const view = await update($, viewAtom, (current) =>
+    current === "agents" ? "runners" : "agents",
+  );
+  await $.store.set("view", view);
+  await reopen($);
+};
+
+const setFolds = async (
+  $: Engine,
+  keys: readonly string[],
+  isFolded: boolean,
+): Promise<void> => {
+  await update($, foldsAtom, (known) => ({
+    ...known,
+    ...Object.fromEntries(keys.map((key) => [key, isFolded])),
+  }));
+  // An inline pane got the rows it asked for at open: ask again for what the
+  // groups now open need ("each open sets it anew"), keeping the keyboard.
+  await reopen($);
 };
 
 const actionsOf = ($: Engine): PaneActions => ({
@@ -150,6 +166,9 @@ const actionsOf = ($: Engine): PaneActions => ({
   },
   foldAll: (keys, isFolded) => {
     void setFolds($, keys, isFolded);
+  },
+  toggle: () => {
+    void toggleView($);
   },
 });
 
@@ -172,6 +191,7 @@ export const onRender = async (
       calls,
       agents: await read($, agentsAtom),
       folds: await read($, foldsAtom),
+      view: await read($, viewAtom),
       now,
       selected: await read($, selectedAtom),
       columns: e.props.bodyColumns,

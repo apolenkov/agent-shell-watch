@@ -5,10 +5,9 @@
  */
 import type { RenderElement } from "claude-code";
 
-import type { ShellCall } from "../../types";
+import type { ShellView } from "../../types";
 import { GLYPH, noteOf } from "../model/format.ts";
 import {
-  type AgentTable,
   type Folds,
   type Group,
   groupsOf,
@@ -21,38 +20,34 @@ import {
   COLOR,
   digitOf,
   type Kit,
-  type RowActions,
   type RowContext,
   rowOf,
-  type RowView,
   toggleLabelOf,
 } from "./row.tsx";
+import {
+  CHROME_ROWS,
+  type RunnersActions,
+  runnersTree,
+  type RunnersView,
+} from "./runners.tsx";
 
 /** What the pane draws. */
-export interface PaneView extends RowView {
-  readonly calls: readonly ShellCall[];
-  readonly agents: AgentTable;
+export interface PaneView extends RunnersView {
   readonly folds: Folds;
-  /** The pane body's height in rows (`e.props.scroll.bodyRows`). */
-  readonly rows: number;
-  /** Whether the pane holds the keyboard (`e.props.isFocused`). */
-  readonly isFocused: boolean;
+  /** Which of the two views to draw. */
+  readonly view: ShellView;
 }
 
 /** What the pane's buttons do. */
-export interface PaneActions extends RowActions {
-  readonly clear: () => void;
-  readonly close: () => void;
+export interface PaneActions extends RunnersActions {
   readonly fold: (key: string, isFolded: boolean) => void;
   readonly foldAll: (keys: readonly string[], isFolded: boolean) => void;
 }
 
-// The toolbar and the hint line around the lines.
-const CHROME_ROWS = 2;
 // `[ 1 ▾ ] ◌ ` before a header's label.
 const HEADER_PREFIX = 10;
 // The terminal does not draw a bracketed Button's hotkey, so each label
-// carries its own key: [ 1 ▸ ], [ f fold ], [ c clear ], [ q close ].
+// carries its own key: [ 1 ▸ ], [ f fold ], [ r runners ], [ c clear ], [ q close ].
 const HINT_FOCUSED = "1–9 open · f fold · c clear · q close · Esc → prompt";
 const HINT_UNFOCUSED = "/shell-watch → keys";
 
@@ -125,6 +120,7 @@ const toolbarOf = (
           );
         }}
       />
+      <Button key="view" label="r runners" hotkey="r" onPress={act.toggle} />
       <Button key="clear" label="c clear" hotkey="c" onPress={act.clear} />
       <Button
         key="close"
@@ -137,14 +133,7 @@ const toolbarOf = (
   );
 };
 
-/**
- * The pane's tree.
- * @param kit the surface's Box, Button and Text
- * @param view the calls, the agents and the pane's own state
- * @param act the buttons' handlers
- * @returns the tree
- */
-export const paneTree = (
+const groupsTree = (
   kit: Readonly<Kit>,
   view: PaneView,
   act: PaneActions,
@@ -183,3 +172,19 @@ export const paneTree = (
     </Box>
   );
 };
+
+/**
+ * The pane's tree: the groups' view, or the runners' when `view.view` says.
+ * @param kit the surface's Box, Button and Text
+ * @param view the calls, the agents and the pane's own state
+ * @param act the buttons' handlers
+ * @returns the tree
+ */
+export const paneTree = (
+  kit: Readonly<Kit>,
+  view: PaneView,
+  act: PaneActions,
+): Readonly<RenderElement> =>
+  view.view === "runners"
+    ? runnersTree(kit, view, act)
+    : groupsTree(kit, view, act);
