@@ -162,7 +162,8 @@ or 600 lines, or lands on `main` outside a PR (`scripts/autofix-report.sh` finds
 commits and the `PROTECTED` list of the workflow, for Dependabot PRs by default and for other authors
 with `AUTHOR=`; the first class only; the other classes below have no detector and are found by hand); a factory write outside a PR branch or
 `night-fix/*`; a merged factory change found to have weakened a test or a check; a secret in an
-artifact, comment or log. The detector was proved on the pilot's own commits: with `hooks/*` declared
+artifact, comment or log. Only commits count: the conclusion of a workflow run is no incident evidence (see "Measured so far"),
+and the rollout gate uses nothing else. The detector was proved on the pilot's own commits: with `hooks/*` declared
 protected it reports 7 incidents, without that 0.
 
 Stopping the factory (the owner, or the coordinator on the owner's behalf; resume with
@@ -194,8 +195,23 @@ schedule; it is run by hand after each Dependabot PR and before every rollout st
   agent's 30-step limit, not by the finding's content (TASK-306); the limit is now 50 steps with a
   budget line in the prompt, and the report counts such failures as `infra`, outside the false-finding
   share. After the fix 0 of 2 failed; the sample is too small to call it measured.
-- The price of one confirmed finding (tokens of review plus verification divided by confirmed
-  findings, criterion #4 of epic 282) is **not measured yet**.
+- Cost, measured by another session on 2026-10-06 and not re-measured here: a full scan 2.72 million
+  tokens; verification and fix of three findings about 1 million tokens and 0.036 USD; about 9 million
+  tokens per merged fix, on a sample of one confirmed finding. In money that is cents, so whether the
+  factory is worth it is decided by the attention it costs a person, not by price; that is why issues
+  are to be opened only for confirmed and disputed findings (TASK-282.6). The cost per confirmed
+  finding as criterion #4 asks (over a sample worth the name) is **not measured yet**.
+- A `failure` of `night-review` or `ci-autofix` is not evidence of a finding or an incident. On
+  2026-10-05 all 6 failed `night-review` runs in agent-compact-advisor (4) and agent-council (2) were
+  GitHub's hosted runner never being assigned: the job is cancelled after 15 to 17 minutes with no
+  step and the annotation "The job was not acquired by Runner of type hosted even after multiple
+  attempts" (the same for 8 of 8 failures in council and 11 of 14 in advisor over the last 100
+  runs; none in the pilot). The review of that PR then does not happen, silently, and nothing
+  retries it. A re-run by hand (`gh run rerun`) or a dispatch with `pr` repeats it.
+- A second silent loss was a real defect: before the pilot's PR #50 the `night-review` gate looked
+  only for an open PR, and with auto-merge the PR is often already merged when the review starts,
+  so the run ended with "no open PR" and nothing reviewed. The gate now looks at every PR state and
+  accepts a PR number on dispatch; the fix is ported to agent-compact-advisor and agent-council.
 - `ci-autofix`: scenario A (one attempt, merged by auto-merge) and scenario B (two attempts, then
   `needs-human`, auto-merge off) ran end to end on the pilot. Dependabot PRs seen in 14 days: none merged
   without a person, one merged with a person (#21), one closed; incidents 0
@@ -219,7 +235,8 @@ schedule; it is run by hand after each Dependabot PR and before every rollout st
 ## Follow-ups (not done by this ADR)
 
 - Restrict environment `ci` to `main` and require SHA pinning in the repository settings.
-- Make `escalate` run when the `fix` job fails, so an LLM outage labels the PR.
+- Make `escalate` run when the `fix` job fails, so an LLM outage labels the PR; retry a job that
+  GitHub never started (`night-review` and `ci-autofix` do not).
 - Protect `tests/` in `ci-autofix` as `night-fix` does, or detect weakened assertions.
 - Run `autofix-report.sh` on a schedule and open an issue on the first incident.
 - One shared copy of `PROTECTED` and of the opencode pin instead of one per workflow and repository.

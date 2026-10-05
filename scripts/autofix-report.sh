@@ -93,7 +93,7 @@ printf '%s' "$rows"
 echo "---"
 echo "dependabot PRs: merged clean=$clean merged with a human=$human closed=$closed open=$open"
 echo "agent: PRs with a fix commit=$fixed, fix commits=$attempts, ended in needs-human=$escalated"
-echo "ci-autofix runs: ${runs:-none}"
+echo "ci-autofix runs: ${runs:-none}   (a failure with a cancelled gate is a hosted runner that was never assigned, not an attempt)"
 echo "incidents: $incidents (autofix commits on main outside a PR: $orphan)"
 if [ "$clean" -ge 3 ] && [ "$incidents" -eq 0 ]; then
   echo "ACCEPTANCE: PASS ($clean clean Dependabot PRs, 0 incidents)"
