@@ -6,10 +6,13 @@
 #   1. disables its workflows: ci-autofix, night-review, night-fix and dependabot-automerge;
 #   2. switches auto-merge off on the open PRs the factory armed or may arm: Dependabot's, those
 #      labelled night-fix or autofix (an armed PR would otherwise merge on green with the workflows off);
-#   3. cancels the queued and running runs of those workflows (--keep-runs leaves them);
-#   4. with --revoke-secret also deletes OCR_LLM_AUTH_TOKEN (environment ci and repository): every
-#      LLM job then fails by itself, but only the owner can put the token back;
-#   5. reads everything back and exits 1 unless nothing is enabled and nothing is armed.
+#   3. cancels the queued and running runs of those workflows (--keep-runs leaves them) and waits
+#      until they have ended: a cancel is asked, not instant (a running scan took 80 seconds);
+#   4. with --revoke-secret also deletes OCR_LLM_AUTH_TOKEN (environment ci, repository Actions
+#      and Dependabot stores): every LLM job then fails by itself, but only the owner can put the
+#      token back (copy the key, then ~/.local/bin/set-ocr-secret.sh apolenkov/<repo>);
+#   5. reads everything back and exits 1 unless nothing is enabled, nothing is armed and no run
+#      is left (STOP_WAIT seconds, default 240, are given to the cancelled runs).
 # It does not touch ci, codeql, scorecard or release (release-please): the checks and releases are
 # not the factory. --resume enables the workflows again and lists the open factory PRs that
 # have no auto-merge now (re-arm: gh pr merge --auto --squash <n>); a deleted secret stays deleted.
@@ -17,6 +20,8 @@ set -euo pipefail
 
 OWNER=apolenkov
 WORKFLOWS=(ci-autofix night-review night-fix dependabot-automerge)
+STOP_WAIT=${STOP_WAIT:-240}
+LIVE=(queued in_progress waiting)
 target=${1:?usage: factory-stop.sh <repo>|--all [--resume] [--dry-run] [--keep-runs] [--revoke-secret]}
 shift || true
 resume=0 dry=0 keep=0 revoke=0
@@ -70,7 +75,7 @@ for repo in "${repos[@]}"; do
     done
     if [ "$keep" = 0 ]; then
       for w in "${WORKFLOWS[@]}"; do
-        for st in queued in_progress; do
+        for st in "${LIVE[@]}"; do
           for id in $(gh run list -R "$R" -w "$w.yml" --status "$st" --json databaseId --jq '.[].databaseId' 2>/dev/null || true); do
             say "  cancel run $id ($w, $st)"; act gh run cancel "$id" -R "$R"
           done
@@ -81,6 +86,7 @@ for repo in "${repos[@]}"; do
       say "  delete OCR_LLM_AUTH_TOKEN (only the owner can put it back)"
       act gh secret delete OCR_LLM_AUTH_TOKEN --env ci -R "$R" 2>/dev/null || true
       act gh secret delete OCR_LLM_AUTH_TOKEN -R "$R" 2>/dev/null || true
+      act gh secret delete OCR_LLM_AUTH_TOKEN --app dependabot -R "$R" 2>/dev/null || true
     fi
   fi
 
@@ -93,6 +99,20 @@ for repo in "${repos[@]}"; do
     if [ "$resume" = 1 ]; then [ "$state" = active ] || { say "  PROBLEM: $w is $state"; problems=$((problems + 1)); }
     else [ "$state" != active ] || { say "  PROBLEM: $w is still $state"; problems=$((problems + 1)); }; fi
   done
+  if [ "$resume" = 0 ] && [ "$keep" = 0 ]; then
+    left=1
+    for _ in $(seq $((STOP_WAIT / 5 + 1))); do
+      left=0
+      for w in "${WORKFLOWS[@]}"; do
+        for st in "${LIVE[@]}"; do
+          left=$((left + $(gh run list -R "$R" -w "$w.yml" --status "$st" --json databaseId --jq length 2>/dev/null || echo 0)))
+        done
+      done
+      [ "$left" -eq 0 ] && break
+      sleep 5
+    done
+    [ "$left" -eq 0 ] || { say "  PROBLEM: $left factory run(s) still not ended after ${STOP_WAIT}s (gh run cancel --force <id>)"; problems=$((problems + 1)); }
+  fi
   if [ "$resume" = 0 ]; then
     armed=$(gh pr list -R "$R" --state open --json number,autoMergeRequest,author,labels --jq '[.[] | select(.autoMergeRequest != null and ((.author.login | test("dependabot")) or ([.labels[].name] | any(. == "night-fix" or . == "autofix"))))] | length')
     [ "$armed" = 0 ] || { say "  PROBLEM: $armed factory PR(s) still have auto-merge on"; problems=$((problems + 1)); }

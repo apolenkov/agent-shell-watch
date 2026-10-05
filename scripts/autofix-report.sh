@@ -17,7 +17,9 @@
 # Suspect (a person has to look; counts against the gate as well): an autofix commit that makes the
 # tests weaker: fewer assertion lines than it removed, a skip/only/todo, a lint or type suppression.
 # Not covered, found by hand: a secret inside a workflow artifact or log.
-# Test hook: PROTECTED_ADD='glob glob' protects more paths, to see an incident being detected.
+# Test hooks: PROTECTED_ADD='glob glob' protects more paths, to see an incident being detected;
+# BOT_LOGIN=<login> reads the comments of that account instead of github-actions[bot] (a drill
+# cannot post as the bot).
 set -euo pipefail
 
 SECRET_RE='(sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|eyJ[A-Za-z0-9_-]{15,}\.eyJ[A-Za-z0-9_-]{10,}|(OPENCODE_API_KEY|OCR_LLM_AUTH_TOKEN)[=:] *[A-Za-z0-9_-]{8,})'
@@ -181,7 +183,7 @@ for endpoint in issues/comments pulls/comments; do
   while IFS= read -r url; do
     leaks=$((leaks + 1)); incident "secret-like text in a bot comment: $url"
   done < <(gh api --paginate "repos/$REPO/$endpoint?since=$SINCE&per_page=100" \
-    --jq ".[] | select(.user.login == \"github-actions[bot]\") | [.html_url, .body] | @tsv" \
+    --jq ".[] | select(.user.login == \"${BOT_LOGIN:-github-actions[bot]}\") | [.html_url, .body] | @tsv" \
     | awk -F'\t' -v re="$SECRET_RE" '$2 ~ re {print $1}')
 done
 

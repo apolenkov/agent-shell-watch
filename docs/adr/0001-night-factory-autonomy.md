@@ -177,8 +177,14 @@ weakens a check without touching tests. Only commits and published text count: t
 workflow run is no incident evidence (see "Measured so far"). The detectors were proved on
 fixtures (`autofix-report.sh --selftest`) and, for the protected-path class, on the pilot's own
 commits: with `hooks/*` declared protected the report finds 9 incidents over the Dependabot,
-`night-fix` and owner PRs, without that 0. The branch and comment detectors have so far only run
-clean on real data.
+`night-fix` and owner PRs, without that 0. A drill on 2026-10-06 in agent-council raised every
+detector on purpose-made cases (a draft PR with a commit that removes assertions, a commit on a
+protected path whose message and the PR body and a comment carry random token-shaped text marked
+as fake, and a branch ending in a commit with the bot's identity and no PR); everything was removed
+afterwards. Two limits of that drill: the bot's author name was set through the API, and the comment
+was read as the owner's account with `BOT_LOGIN=` because a drill cannot post as `github-actions[bot]`,
+so the author filter of the comment scan itself was not exercised. The class "autofix commit on
+`main` outside a PR" was not drilled: it would need a commit on `main`.
 
 Stopping the factory is one command (the owner, or the coordinator on the owner's behalf):
 
@@ -189,12 +195,20 @@ scripts/factory-stop.sh <repo> --resume   # undo
 
 It disables `ci-autofix`, `night-review`, `night-fix` **and `dependabot-automerge`**; switches
 auto-merge off on the open Dependabot, `night-fix` and `autofix` PRs (an armed PR would merge on
-green with the workflows off); cancels their queued and running runs (`--keep-runs` leaves them);
-then reads everything back and exits 1 unless nothing is enabled and nothing is armed. `--dry-run`
-only prints. `--revoke-secret` also deletes `OCR_LLM_AUTH_TOKEN` (every LLM job then fails by itself
-at its "token is empty" check; only the owner can put the token back; use it when a leak is
-suspected, since a cancelled job's token is gone with the runner but a copy may already exist
-elsewhere). It does not touch `ci`, `codeql`, `scorecard` or the release workflow: the checks and
+green with the workflows off); cancels their queued and running runs (`--keep-runs` leaves them) and waits for them to end (a cancel
+is a request: a running scan took 80 to 107 seconds, so `STOP_WAIT`, default 240 s); then reads
+everything back and exits 1 unless nothing is enabled, nothing is armed and no run is left.
+`--dry-run` only prints.
+
+`--revoke-secret` additionally deletes `OCR_LLM_AUTH_TOKEN` from environment `ci` and from the
+repository's Actions and Dependabot stores; every LLM job then fails by itself at its "token is
+empty" check. Use it only when a leak is suspected. Only the owner can undo it, because only he has
+the key: copy the key, then run `~/.local/bin/set-ocr-secret.sh apolenkov/<repo>`, which stores it
+in the repository's Actions and Dependabot stores (a job with `environment: ci` also sees
+repository secrets). **Not verified, by the coordinator's decision of 2026-10-06: the price of
+checking an emergency button that breaks the factory until the owner is at the keyboard is higher
+than the benefit.** The command is a plain `gh secret delete` of three stores and is not covered by
+the drill. It does not touch `ci`, `codeql`, `scorecard` or the release workflow: the checks and
 releases are not the factory, and a green PR the owner armed himself still merges. `--resume` enables
 the workflows again and lists the open factory PRs that now lack auto-merge (re-arm with
 `gh pr merge --auto --squash <n>`); Dependabot's workflow re-arms its own PRs on their next event.
@@ -252,10 +266,13 @@ schedule; it is run by hand after each Dependabot PR and before every rollout st
   Dependabot secret.
 - The rejection of a bad patch on a cloud runner: tried locally on prepared patches (workflow edit,
   deletion, symlink, size, `tsconfig`, scripts, `.npmrc`, foreign registry), never in Actions.
-- The stop switch: the workflow part and the auto-merge part were drilled live on 2026-10-06 (council,
-  a throwaway PR labelled `autofix` with auto-merge armed: stop disarmed it, resume re-enabled the
-  workflows; the PR was closed unmerged). Not exercised: `--all`, `--revoke-secret`, the cancelling of
-  running runs. Also not verified: the behaviour at an exhausted subscription.
+- The stop switch was drilled live on 2026-10-06 in agent-council: workflows disabled and enabled, a
+  throwaway PR with auto-merge armed disarmed, a running scan cancelled. The drill found a defect:
+  the first version printed `STOPPED` while the cancelled run was still running (it ended 90 seconds
+  later); it now waits for the runs to end (second drill: 107 s, run `completed/cancelled`, exit 0).
+  `--all` was run only as `--dry-run` (it lists council, the pilot and advisor); it has not been
+  applied to more than one repository. `--revoke-secret` is not verified (see above). Also not
+  verified: the behaviour at an exhausted subscription.
 - The environment `ci` has no protection rule and no deployment-branch policy: any workflow on any
   branch of this repository that names `environment: ci` receives the secret. This is safe only
   while the owner is the sole writer; it is a convention, not a barrier.
