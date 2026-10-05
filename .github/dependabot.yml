@@ -4,11 +4,8 @@ version: 2
 updates:
   - package-ecosystem: npm
     directory: /
-    # typescript-eslint supports TypeScript < 6.1 only; take a new TypeScript
-    # major once it does.
-    ignore:
-      - dependency-name: typescript
-        update-types: [version-update:semver-major]
+    # TEMPORARY (TASK-282.2 pilot): the TypeScript major is let through once so that
+    # ci-autofix has a red Dependabot PR to work on; the ignore comes back after.
     schedule:
       interval: weekly
     cooldown:
