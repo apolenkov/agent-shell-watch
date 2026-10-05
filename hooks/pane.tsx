@@ -7,6 +7,9 @@ import { atom, read, update } from "claude-code";
 
 import type { ShellAgents, ShellCall } from "../types";
 import { finishedIds, liveOnly, noticed, tailed } from "./model/calls.ts";
+import { configOf } from "./model/config.ts";
+import { groupsOf } from "./model/groups.ts";
+import { rowsWantedOf } from "./model/pane-items.ts";
 import { type PaneActions, paneTree } from "./view/pane.tsx";
 
 const NO_CALLS: readonly ShellCall[] = [];
@@ -30,6 +33,10 @@ const NO_FOLDS: Readonly<Record<string, boolean>> = {};
 const foldsAtom = atom(
   { plugin: "agent-shell-watch", key: "folds" } as const,
   NO_FOLDS,
+);
+const configAtom = atom(
+  { plugin: "agent-shell-watch", key: "config" } as const,
+  configOf({}),
 );
 const nowAtom = atom({ plugin: "agent-shell-watch", key: "now" } as const, 0);
 const openAtom = atom(
@@ -104,10 +111,25 @@ const setFolds = async (
   keys: readonly string[],
   isFolded: boolean,
 ): Promise<void> => {
-  await update($, foldsAtom, (folds) => ({
-    ...folds,
+  const folds = await update($, foldsAtom, (known) => ({
+    ...known,
     ...Object.fromEntries(keys.map((key) => [key, isFolded])),
   }));
+  // An inline pane got the rows it asked for at open: ask again for what the
+  // groups now open need ("each open sets it anew"), keeping the keyboard.
+  const groups = groupsOf(
+    await read($, callsAtom),
+    await read($, agentsAtom),
+    await $.clock.now(),
+  );
+  const { columns } = await read($, configAtom);
+  await $.ui.open({
+    id: PANE,
+    title: PANE,
+    columns,
+    rows: rowsWantedOf(groups, folds),
+    focus: true,
+  });
 };
 
 const actionsOf = ($: Engine): PaneActions => ({

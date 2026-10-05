@@ -82,3 +82,38 @@ test("f folds every group, then opens them; a new group gets its default", async
   // main, new, starts idle: open by default although the rest are folded.
   expect(await labelOf(pane, "group:main")).toBe("1 ▾");
 });
+
+test("opening a group asks the pane for the rows it now needs", async ($, on) => {
+  const clock = mock.clock(on);
+  const agents: AgentInfo[] = [
+    { id: "a1", type: "Explore", description: "Find", status: "running" },
+  ];
+  const seen = world(on, {}, agents);
+  const [use] = subagentCall.toolUses;
+  seen.transcripts.set("a1", [
+    {
+      ...subagentCall,
+      toolUses: [use, { ...use, tool_use_id: "d2" }],
+    },
+  ]);
+  await $.session.start(START);
+  agents[0] = {
+    id: "a1",
+    type: "Explore",
+    description: "Find",
+    status: "completed",
+  };
+  await advance(clock, 2000);
+  await $.command.run({
+    command: "shell-watch",
+    args: "",
+    origin: { kind: "composer" },
+    presentation: { isFullscreen: false, columns: 120 },
+  });
+  const pane = await paneOf($, "terminal");
+  expect(await labelOf(pane, "group:a1")).toBe("1 ▸");
+  await pane.press({ key: "group:a1" });
+  expect(await labelOf(pane, "group:a1")).toBe("1 ▾");
+  // chrome 2 + header 1 + two rows: head, command, last line 3 each
+  expect(seen.rows).toEqual([6, 9]);
+});
