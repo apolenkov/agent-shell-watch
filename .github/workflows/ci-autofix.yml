@@ -36,6 +36,10 @@ env:
     eslint/*
     knip.json
     .ls-lint.yml
+    .nvmrc
+    .prettierrc*
+    .prettierignore
+    tsconfig*.json
     .gitleaks*
     .env
     .env.*
@@ -43,11 +47,14 @@ env:
     *.key
     .opencode/*
     opencode.json
+    opencode.jsonc
+    .npmrc
     AGENTS.md
     ci-failure.log
-  # opencode-ai pinned by version and registry integrity (npm view, 2026-10-05).
+  # The linux-x64 binary package of opencode-ai, pinned by version and registry
+  # integrity (npm view, 2026-10-05). The opencode-ai wrapper needs a postinstall.
   OPENCODE_VERSION: 1.18.34
-  OPENCODE_INTEGRITY: sha512-9WUS2T0t4HHDVzXvuwTHF0nvhXvZ9mQ0r+ozCvKdJu0LVoQpOzqAW4qWTC3ygNc5Oedcc7j+Oct24JYlQYnySA==
+  OPENCODE_INTEGRITY: sha512-RTAMjCve4euxP2QKLuvRmdoW5J5DQK1DiZqt+7slfixyjAEi79QC2Df2oYKogibaAI4IEU8uzenoJeEl3k+UEw==
   OPENCODE_MODEL: opencode-go/deepseek-v4.1-flash
 
 jobs:
@@ -57,6 +64,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       pull-requests: read
+      actions: read
     outputs:
       pr: ${{ steps.gate.outputs.pr }}
       sha: ${{ steps.gate.outputs.sha }}
@@ -68,6 +76,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
@@ -87,8 +96,11 @@ jobs:
           if [ "$author" != "dependabot[bot]" ] && { [ "$author" != "$owner" ] || [ "$opt_in" != true ]; }; then
             echo "author $author is not eligible"; exit 0
           fi
-          done_n=$(gh api --paginate "repos/$REPO/pulls/$number/commits" --jq '.[].commit.message' \
-            | grep -c '^Autofix-Attempt: ' || true)
+          # A red `secrets` (gitleaks) job is for a person, not the agent.
+          failed=$(gh run view "$RUN_ID" -R "$REPO" --json jobs --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(",")')
+          [ "$failed" = check ] || { echo "failed jobs: $failed; only check is fixable"; exit 0; }
+          msgs=$(gh api --paginate "repos/$REPO/pulls/$number/commits" --jq '.[].commit.message')
+          done_n=$(grep -c '^Autofix-Attempt: ' <<<"$msgs" || true)
           {
             echo "pr=$number"
             echo "sha=$head_sha"
@@ -128,18 +140,20 @@ jobs:
       - name: install opencode
         run: |
           set -euo pipefail
-          got=$(npm view "opencode-ai@$OPENCODE_VERSION" dist.integrity)
+          got=$(npm view "opencode-linux-x64@$OPENCODE_VERSION" dist.integrity)
           [ "$got" = "$OPENCODE_INTEGRITY" ] || { echo "integrity mismatch: $got"; exit 1; }
-          npm install --prefix "$RUNNER_TEMP/oc" --no-save --no-audit --no-fund --ignore-scripts "opencode-ai@$OPENCODE_VERSION"
-          echo "$RUNNER_TEMP/oc/node_modules/.bin" >> "$GITHUB_PATH"
+          npm install --prefix "$RUNNER_TEMP/oc" --no-save --no-audit --no-fund --ignore-scripts "opencode-linux-x64@$OPENCODE_VERSION"
+          echo "$RUNNER_TEMP/oc/node_modules/opencode-linux-x64/bin" >> "$GITHUB_PATH"
       - name: agent
         env:
           OPENCODE_API_KEY: ${{ secrets.OCR_LLM_AUTH_TOKEN }}
           OPENCODE_DISABLE_AUTOUPDATE: "1"
           OPENCODE_DISABLE_MODELS_FETCH: "1"
           OPENCODE_DISABLE_LSP_DOWNLOAD: "1"
+          OPENCODE_DISABLE_PROJECT_CONFIG: "1"
         run: |
           set -euo pipefail
+          [ -n "$OPENCODE_API_KEY" ] || { echo "::error::OCR_LLM_AUTH_TOKEN is empty in this trigger context"; exit 1; }
           # No shell for the agent: bash would inherit the LLM token. Edit rules
           # come from PROTECTED; read of env files is denied too.
           OPENCODE_CONFIG_CONTENT=$(jq -nc --arg model "$OPENCODE_MODEL" --arg protected "$PROTECTED" '{
@@ -218,11 +232,14 @@ jobs:
             echo "rejected: $1"
             exit 0
           }
+          # Scripts and the set of dependency names stay as they are; versions may move.
+          guard='{scripts, names: [(.dependencies // {}), (.devDependencies // {}), (.overrides // {}) | keys]}'
+          pkg_before=$(jq -cS "$guard" package.json)
           [ -s "$PATCH" ] || reject "the agent proposed no change"
           git apply --index "$PATCH" || reject "the patch does not apply"
           # Authoritative checks on the applied tree: protected paths, deletions,
           # symlinks, size. A violation throws the whole patch away.
-          git diff --cached --name-status --no-renames | while IFS=$'\t' read -r status path; do
+          git diff --cached --name-status --no-renames -z | while IFS= read -r -d '' status && IFS= read -r -d '' path; do
             [ "$status" != D ] || { echo "deletes $path"; exit 1; }
             while IFS= read -r glob; do
               [ -z "$glob" ] && continue
@@ -230,25 +247,31 @@ jobs:
               case "$path" in $glob) echo "touches protected $path"; exit 1;; esac
             done <<<"$PROTECTED"
           done || reject "the patch deletes files or touches protected paths (.github, hooks, check config, secrets)"
-          ! git diff --cached --raw --no-renames | grep -q '^:[0-7]* 120000' || reject "the patch adds a symlink"
+          [ "$(jq -cS "$guard" package.json)" = "$pkg_before" ] || reject "the patch changes scripts or dependency names in package.json"
+          # Captured, not piped into `grep -q`: its early exit would SIGPIPE the producer.
+          foreign=$(jq -r '.packages[].resolved // empty' package-lock.json | grep -v '^https://registry.npmjs.org/' || true)
+          [ -z "$foreign" ] || reject "the patch points package-lock.json outside the npm registry"
+          links=$(git diff --cached --raw --no-renames | grep '^:[0-7]* 120000' || true)
+          [ -z "$links" ] || reject "the patch adds a symlink"
           read -r files lines < <(git diff --cached --numstat | awk '{n++; l+=$1+$2} END {print n+0, l+0}')
           { [ "$files" -le 25 ] && [ "$lines" -le 600 ]; } || reject "the patch is too large ($files files, $lines lines)"
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
             commit -q -m "fix(repo): autofix the failing check (attempt $ATTEMPT)" -m "Autofix-Attempt: $ATTEMPT
           Autofix-Run: $RUN_URL"
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "HEAD:refs/heads/${HEAD_BRANCH}"
+          # Not a fast-forward: the branch moved on, and its new head starts its own cycle.
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "HEAD:refs/heads/${HEAD_BRANCH}" \
+            || { echo "branch moved, nothing pushed"; exit 0; }
           # A push made with GITHUB_TOKEN starts no `pull_request` run; workflow
           # dispatch is exempt. Both required workflows are re-run by hand.
-          gh workflow run ci.yml -R "$REPO" --ref "$HEAD_BRANCH"
-          gh workflow run codeql.yml -R "$REPO" --ref "$HEAD_BRANCH"
+          # Pushed but not re-run would leave the PR waiting for checks forever.
+          { gh workflow run ci.yml -R "$REPO" --ref "$HEAD_BRANCH" && gh workflow run codeql.yml -R "$REPO" --ref "$HEAD_BRANCH"; } \
+            || echo "reason=the fix was pushed but the checks could not be re-run (workflow_dispatch missing on this branch?)" >> "$GITHUB_OUTPUT"
 
   escalate:
-    needs: [gate, fix, push]
+    needs: [gate, push]
     if: >-
       always() && needs.gate.outputs.pr != '' && (
-        needs.gate.outputs.exhausted == 'true' ||
-        needs.fix.result == 'failure' || needs.fix.result == 'cancelled' ||
-        needs.push.outputs.reason != '')
+        needs.gate.outputs.exhausted == 'true' || needs.push.outputs.reason != '')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -260,15 +283,15 @@ jobs:
           REPO: ${{ github.repository }}
           PR: ${{ needs.gate.outputs.pr }}
           EXHAUSTED: ${{ needs.gate.outputs.exhausted }}
-          FIX_RESULT: ${{ needs.fix.result }}
           PUSH_REASON: ${{ needs.push.outputs.reason }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
           if [ "$EXHAUSTED" = true ]; then why="$MAX_ATTEMPTS attempts did not make the checks pass"
-          elif [ -n "$PUSH_REASON" ]; then why="$PUSH_REASON"
-          else why="the agent job ended as $FIX_RESULT"; fi
-          gh label create needs-human -R "$REPO" --color B60205 --description "CI autofix gave up" 2> /dev/null || true
-          gh pr edit "$PR" -R "$REPO" --add-label needs-human
+          else why="$PUSH_REASON"; fi
+          # Auto-merge off first: it is the step that matters most.
           gh pr merge "$PR" -R "$REPO" --disable-auto || true
+          gh api -X POST "repos/$REPO/issues/$PR/labels" -f 'labels[]=needs-human' > /dev/null
+          [ "$(gh pr view "$PR" -R "$REPO" --json autoMergeRequest --jq '.autoMergeRequest != null')" = false ] \
+            || { echo "::error::auto-merge is still enabled"; exit 1; }
           gh pr comment "$PR" -R "$REPO" --body "ci-autofix stopped: $why. Auto-merge is off; a person has to look. Run: $RUN_URL"
