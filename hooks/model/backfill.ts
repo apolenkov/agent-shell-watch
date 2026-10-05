@@ -122,4 +122,3 @@ export const merged = (
   ];
   return trimmed(ordered, max);
 };
-export const autofixProbe: number = "not a number";
