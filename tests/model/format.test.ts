@@ -49,7 +49,7 @@ test("a running runner shows elapsed, freshness and what it says now", () => {
     tail: ["reading files", "applying patch", ""],
   });
   expect(statusLineOf([codex], 133_000)).toBe(
-    "◐ codex · Review diff 2:13 · output 4s ago · › applying patch",
+    "◐ main · codex · Review diff 2:13 · output 4s ago · › applying patch",
   );
 });
 
@@ -68,17 +68,17 @@ test("the most urgent leads; the rest are counted", () => {
     }),
   ];
   expect(statusLineOf(calls, 7 * MIN)).toBe(
-    "✗ Typecheck exit 2 · +1 quiet · +2 bg · +1 running",
+    "✗ main · Typecheck exit 2 · +1 quiet · +2 bg · +1 running",
   );
   expect(
     statusLineOf(
       [callOf({ status: "hung", runner: "pi", label: "Fix", lastOutputAt: 0 })],
       12 * MIN,
     ),
-  ).toBe("⚠ hung 12m pi · Fix");
+  ).toBe("⚠ hung 12m main · pi · Fix");
   expect(
     statusLineOf([callOf({ status: "quiet", lastOutputAt: 0 })], 6 * MIN),
-  ).toBe("⚠ quiet 6m Run tests 6:00");
+  ).toBe("⚠ quiet 6m main · Run tests 6:00");
 });
 
 test("the rest are counted as +N; a denied call never shows", () => {
@@ -87,14 +87,16 @@ test("the rest are counted as +N; a denied call never shows", () => {
     callOf({ id: "f2", status: "failed", exitCode: 1, endedAt: 50_000 }),
     callOf({ id: "d", status: "denied", verdict: "denied", endedAt: 59_000 }),
   ];
-  expect(statusLineOf(failed, 60_000)).toBe("✗ Run tests exit 1 · +1 failed");
+  expect(statusLineOf(failed, 60_000)).toBe(
+    "✗ main · Run tests exit 1 · +1 failed",
+  );
   expect(statusLineOf(failed, 11 * MIN)).toBeUndefined();
   expect(
     statusLineOf(
       [callOf({ id: "h", status: "hung", lastOutputAt: 0 }), ...failed],
       60_000,
     ),
-  ).toBe("⚠ hung 1m Run tests · +2 failed");
+  ).toBe("⚠ hung 1m main · Run tests · +2 failed");
   expect(
     statusLineOf([callOf({ status: "denied", endedAt: 0 })], 1000),
   ).toBeUndefined();
@@ -102,9 +104,13 @@ test("the rest are counted as +N; a denied call never shows", () => {
 
 test("a watched run with no output yet says so, never 'output … ago'", () => {
   const silent = callOf({ label: "Wait", outputPath: "/t/o" });
-  expect(statusLineOf([silent], 45_000)).toBe("◐ Wait 0:45 · no output · 45s");
+  expect(statusLineOf([silent], 45_000)).toBe(
+    "◐ main · Wait 0:45 · no output · 45s",
+  );
   expect(stateOf(silent, 45_000)).toBe("0:45 no output · 45s");
-  expect(statusLineOf([callOf({ label: "Wait" })], 45_000)).toBe("◐ Wait 0:45");
+  expect(statusLineOf([callOf({ label: "Wait" })], 45_000)).toBe(
+    "◐ main · Wait 0:45",
+  );
 });
 
 test("line 1 leads with time and state, the label comes after", () => {
@@ -183,5 +189,33 @@ test("an unknown start time reads as —, not 0:00", () => {
   ).toBe("— exit 0");
   expect(
     statusLineOf([callOf({ label: "Wait", isTimeUnknown: true })], 5000),
-  ).toBe("◐ Wait —");
+  ).toBe("◐ main · Wait —");
+});
+
+test("the status line says whose the leading call is", () => {
+  const agents = {
+    a1: { type: "general-purpose", description: "Review", status: "running" },
+  };
+  const calls = [
+    callOf({ id: "h", label: "Wait", status: "hung", lastOutputAt: 0 }),
+    callOf({
+      id: "f",
+      agentId: "a1",
+      runner: "devin",
+      label: "Review",
+      status: "failed",
+      verdict: "RATE_LIMIT 1790000000",
+      endedAt: 9 * 3_600_000,
+    }),
+  ];
+  expect(statusLineOf(calls, 9 * 3_600_000, agents)).toBe(
+    "⚠ hung 9h main · Wait · +1 failed",
+  );
+  const [, failed] = calls;
+  expect(
+    statusLineOf(failed === undefined ? [] : [failed], 9 * 3_600_000, agents),
+  ).toBe("✗ general-purpose · devin · Review RATE_LIMIT 1790000000");
+  expect(statusLineOf([callOf({ agentId: "zz", label: "Go" })], 1000, {})).toBe(
+    "◐ agent zz · Go 0:01",
+  );
 });

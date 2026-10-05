@@ -64,7 +64,7 @@ for (const surface of ["terminal", "desktop"] as const) {
     const pane = await paneOf($, surface, { columns: 100, rows: 5 });
     const text = await textOf(pane);
     expect(text).toContain("› reviewing src/queue.ts");
-    expect(text).not.toContain("main · echo 1");
+    expect(text).not.toContain("echo 1");
   });
 
   test(`${surface}: inline and tall enough, every row is drawn in full`, async ($, on) => {
@@ -72,7 +72,7 @@ for (const surface of ["terminal", "desktop"] as const) {
     const pane = await paneOf($, surface, { columns: 100, rows: 30 });
     const text = await textOf(pane);
     expect(text).toContain("› reviewing src/queue.ts");
-    expect(text).toContain("main · echo 1");
+    expect(text).toContain("echo 1");
     expect(text).not.toContain("older");
   });
 }
@@ -80,7 +80,7 @@ for (const surface of ["terminal", "desktop"] as const) {
 test("/shell-watch asks for the height its rows need", async ($, on) => {
   const seen = await withRunner($, on);
   await $.command.run(RUN);
-  // toolbar and hint 2 + runner 3 (head, source, note) + three done rows,
-  // each head, source and its output line 3
-  expect(seen.rows).toEqual([14]);
+  // toolbar and hint 2 + main's header 1 + runner 3 (head, source, note) +
+  // three done rows, each head, source and its output line 3
+  expect(seen.rows).toEqual([15]);
 });

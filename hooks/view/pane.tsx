@@ -1,35 +1,38 @@
 /**
- * The pane's tree: housekeeping buttons, then one row per call, live ones
- * first and the newest first, as many as fit the height, a selected row expanded to its command, tail and stderr.
- * Each row leads with a `[ ▸ ]` Button, so Tab reaches it and Enter expands.
+ * The pane's tree: housekeeping buttons, then each agent's group (its
+ * header, and the rows of an open group), the most urgent group first, as
+ * many lines as fit the height.
  */
-import type { Elements, RenderElement } from "claude-code";
+import type { RenderElement } from "claude-code";
 
-import type { ShellAgents, ShellCall, ShellStatus } from "../../types";
-import { isLive } from "../model/calls.ts";
-import { GLYPH, nameOf, type Note, noteOf, stateOf } from "../model/format.ts";
+import type { ShellCall } from "../../types";
+import { GLYPH, noteOf } from "../model/format.ts";
 import {
-  detailsOf,
-  fit,
-  isNoteKept,
-  oneLine,
-  paneOrder,
-  tailFit,
-  type Visible,
-  visibleOf,
-} from "../model/layout.ts";
-
-/** The elements the pane draws with, on every surface that has a pane. */
-export type Kit = Pick<Elements["terminal"], "Box" | "Button" | "Text">;
+  type AgentTable,
+  type Folds,
+  type Group,
+  groupsOf,
+  type GroupStatus,
+} from "../model/groups.ts";
+import { fit, oneLine } from "../model/layout.ts";
+import { type PaneItem, paneLayoutOf } from "../model/pane-items.ts";
+import {
+  canStop,
+  COLOR,
+  digitOf,
+  type Kit,
+  type RowActions,
+  type RowContext,
+  rowOf,
+  type RowView,
+  toggleLabelOf,
+} from "./row.tsx";
 
 /** What the pane draws. */
-export interface PaneView {
+export interface PaneView extends RowView {
   readonly calls: readonly ShellCall[];
-  readonly agents: ShellAgents;
-  readonly now: number;
-  readonly selected: string;
-  /** The pane body's width in cells (`e.props.bodyColumns`). */
-  readonly columns: number;
+  readonly agents: AgentTable;
+  readonly folds: Folds;
   /** The pane body's height in rows (`e.props.scroll.bodyRows`). */
   readonly rows: number;
   /** Whether the pane holds the keyboard (`e.props.isFocused`). */
@@ -37,200 +40,66 @@ export interface PaneView {
 }
 
 /** What the pane's buttons do. */
-export interface PaneActions {
+export interface PaneActions extends RowActions {
   readonly clear: () => void;
   readonly close: () => void;
-  readonly select: (id: string) => void;
-  readonly stop: (taskId: string) => void;
+  readonly fold: (key: string, isFolded: boolean) => void;
+  readonly foldAll: (keys: readonly string[], isFolded: boolean) => void;
 }
 
-// Calls that did nothing wrong and nothing worth a look: drawn dim.
-const DIM: ReadonlySet<ShellStatus> = new Set(["denied", "nomatch"]);
-
-const COLOR: Readonly<Record<ShellStatus, string>> = {
-  running: "yellow",
-  quiet: "yellow",
-  hung: "red",
-  done: "green",
-  failed: "red",
-  stopped: "gray",
-  denied: "gray",
-  nomatch: "gray",
-};
-
-const sourceOf = (call: ShellCall, agents: ShellAgents): string => {
-  const who =
-    call.agentId === undefined
-      ? "main"
-      : (agents[call.agentId] ?? `agent ${call.agentId}`);
-  return call.background ? `bg · ${who}` : who;
-};
-
-const NOTE_INDENT = 6;
-// `[1 ▸] ● ` before the state, a gap before the label, `[s stop]` after it.
-const HEAD_PREFIX = 9;
-const STOP_WIDTH = 9;
-// The toolbar and the hint line around the rows.
+// The toolbar and the hint line around the lines.
 const CHROME_ROWS = 2;
-const HOTKEYS = 9;
+// `[ 1 ▾ ] ◌ ` before a header's label.
+const HEADER_PREFIX = 10;
 // The terminal does not draw a bracketed Button's hotkey, so each label
-// carries its own key: [ 1 ▸ ], [ c clear ], [ q close ], [ s stop ].
-const HINT_FOCUSED = "1–9 open · c clear · q close · Esc → prompt";
+// carries its own key: [ 1 ▸ ], [ f fold ], [ c clear ], [ q close ].
+const HINT_FOCUSED = "1–9 open · f fold · c clear · q close · Esc → prompt";
 const HINT_UNFOCUSED = "/shell-watch → keys";
 
-/** How a note's tone draws: its mark, and a color for errors. */
-interface Look {
-  readonly mark: string;
-  readonly color?: string;
-}
-
-const NOTE_LOOK: Readonly<Record<Note["tone"], Look>> = {
-  output: { mark: "›" },
-  error: { mark: "✗", color: "red" },
-  denied: { mark: "○" },
+const GROUP_GLYPH: Readonly<Record<GroupStatus, string>> = {
+  ...GLYPH,
+  idle: "◌",
+};
+const GROUP_COLOR: Readonly<Record<GroupStatus, string>> = {
+  ...COLOR,
+  idle: "gray",
 };
 
-/** The view and its handlers, as every row reads them. */
-interface Context {
-  readonly view: PaneView;
-  readonly act: PaneActions;
-  /** The only stoppable row gets the `s` hotkey. */
-  readonly stopKey: string;
-  /** How the rows fit: compact rows, and the room for details. */
-  readonly fit: Pick<Visible, "isCompact" | "detailRoom">;
-}
-
-/** One row as drawn: its call and its place among the shown rows. */
-interface Row {
-  readonly call: ShellCall;
-  readonly index: number;
-}
-
-const canStop = (call: ShellCall): boolean =>
-  call.background && isLive(call) && call.taskId !== undefined;
-
-const toggleLabelOf = (index: number, isOpen: boolean): string => {
-  const arrow = isOpen ? "▾" : "▸";
-  return index < HOTKEYS ? `${String(index + 1)} ${arrow}` : arrow;
+const summaryOf = (group: Group, isFolded: boolean): string => {
+  const plural = group.calls.length === 1 ? "" : "s";
+  const count = `${String(group.calls.length)} call${plural}`;
+  const live = group.live > 0 ? ` · ${String(group.live)} live` : "";
+  const lead = group.calls[0];
+  const note = isFolded && lead !== undefined ? noteOf(lead) : undefined;
+  const says = note === undefined ? "" : ` · › ${note.text}`;
+  return ` · ${count}${live}${says}`;
 };
 
-const digitOf = (index: number): Readonly<{ hotkey?: string }> =>
-  index < HOTKEYS ? { hotkey: String(index + 1) } : {};
-
-const stopOf = (
+const headerOf = (
   kit: Readonly<Kit>,
-  { act, stopKey }: Pick<Context, "act" | "stopKey">,
-  call: ShellCall,
-): Readonly<RenderElement> | false => {
-  const { Button } = kit;
-  return (
-    canStop(call) && (
-      <Button
-        key={`stop:${call.id}`}
-        label={stopKey === call.id ? "s stop" : "stop"}
-        {...(stopKey === call.id && { hotkey: "s" })}
-        onPress={() => {
-          act.stop(call.taskId ?? "");
-        }}
-      />
-    )
-  );
-};
-
-const headRowOf = (
-  kit: Readonly<Kit>,
-  { view, act, stopKey }: Context,
-  { call, index }: Row,
+  context: Readonly<{ view: PaneView; act: PaneActions }>,
+  item: Readonly<{ group: Group; isFolded: boolean; index: number }>,
 ): Readonly<RenderElement> => {
   const { Box, Button, Text } = kit;
-  const state = fit(stateOf(call, view.now), view.columns - HEAD_PREFIX);
-  const room =
-    view.columns -
-    HEAD_PREFIX -
-    state.length -
-    (canStop(call) ? STOP_WIDTH : 0);
+  const { group, isFolded, index } = item;
+  const label = fit(oneLine(group.label), context.view.columns - HEADER_PREFIX);
+  const rest = context.view.columns - HEADER_PREFIX - label.length;
   return (
-    <Box flexDirection="row" gap={1}>
+    <Box key={`head:${group.key}`} flexDirection="row" gap={1}>
       <Button
-        key={`row:${call.id}`}
-        label={toggleLabelOf(index, view.selected === call.id)}
+        key={`group:${group.key}`}
+        label={toggleLabelOf(index, !isFolded)}
         {...digitOf(index)}
         {...(index === 0 && { autoFocus: true })}
         onPress={() => {
-          act.select(call.id);
+          context.act.fold(group.key, !isFolded);
         }}
       />
-      <Text color={COLOR[call.status]}>{GLYPH[call.status]}</Text>
-      <Text dimColor={DIM.has(call.status)}>{state}</Text>
-      <Text dimColor={DIM.has(call.status)} wrap="truncate-end">
-        {fit(oneLine(nameOf(call)), room)}
-      </Text>
-      {stopOf(kit, { act, stopKey }, call)}
-    </Box>
-  );
-};
-
-const noteRowOf = (
-  kit: Readonly<Kit>,
-  view: PaneView,
-  call: ShellCall,
-): readonly Readonly<RenderElement>[] => {
-  const { Text } = kit;
-  const note = noteOf(call);
-  if (note === undefined) {
-    return [];
-  }
-  const look = NOTE_LOOK[note.tone];
-  const text = `${look.mark} ${note.text}`;
-  return [
-    <Text
-      {...(look.color !== undefined && { color: look.color })}
-      dimColor={note.tone !== "error"}
-      wrap="truncate-end"
-    >
-      {fit(oneLine(text), view.columns - NOTE_INDENT)}
-    </Text>,
-  ];
-};
-
-const bodyOf = (
-  kit: Readonly<Kit>,
-  { view, fit: room }: Context,
-  call: ShellCall,
-): readonly Readonly<RenderElement>[] => {
-  const { Text } = kit;
-  const width = view.columns - NOTE_INDENT;
-  const isSelected = view.selected === call.id;
-  if (!isSelected && room.isCompact) {
-    return isNoteKept(call) ? noteRowOf(kit, view, call) : [];
-  }
-  const source = `${sourceOf(call, view.agents)} · ${call.command}`;
-  const details = isSelected ? tailFit(detailsOf(call), room.detailRoom) : [];
-  return [
-    <Text dimColor wrap="truncate-end">
-      {fit(oneLine(source), width)}
-    </Text>,
-    ...noteRowOf(kit, view, call),
-    ...details.map((line) => (
+      <Text color={GROUP_COLOR[group.status]}>{GROUP_GLYPH[group.status]}</Text>
+      <Text bold>{label}</Text>
       <Text dimColor wrap="truncate-end">
-        {fit(`  ${line.replaceAll("\t", "  ")}`, width)}
+        {fit(oneLine(summaryOf(group, isFolded)), rest)}
       </Text>
-    )),
-  ];
-};
-
-const rowOf = (
-  kit: Readonly<Kit>,
-  context: Context,
-  row: Row,
-): Readonly<RenderElement> => {
-  const { Box } = kit;
-  return (
-    <Box key={`call:${row.call.id}`} flexDirection="column">
-      {headRowOf(kit, context, row)}
-      <Box paddingLeft={NOTE_INDENT} flexDirection="column">
-        {bodyOf(kit, context, row.call)}
-      </Box>
     </Box>
   );
 };
@@ -238,10 +107,24 @@ const rowOf = (
 const toolbarOf = (
   kit: Readonly<Kit>,
   act: PaneActions,
+  groups: readonly PaneItem[],
 ): Readonly<RenderElement> => {
   const { Box, Button } = kit;
+  const headers = groups.filter((item) => item.kind === "header");
+  const isAnyOpen = headers.some((item) => !item.isFolded);
   return (
     <Box flexDirection="row" gap={1}>
+      <Button
+        key="fold"
+        label="f fold"
+        hotkey="f"
+        onPress={() => {
+          act.foldAll(
+            headers.map((item) => item.group.key),
+            isAnyOpen,
+          );
+        }}
+      />
       <Button key="clear" label="c clear" hotkey="c" onPress={act.clear} />
       <Button
         key="close"
@@ -257,7 +140,7 @@ const toolbarOf = (
 /**
  * The pane's tree.
  * @param kit the surface's Box, Button and Text
- * @param view the calls and the pane's own state
+ * @param view the calls, the agents and the pane's own state
  * @param act the buttons' handlers
  * @returns the tree
  */
@@ -267,27 +150,33 @@ export const paneTree = (
   act: PaneActions,
 ): Readonly<RenderElement> => {
   const { Box, Text } = kit;
-  const { shown, hidden, isCompact, detailRoom } = visibleOf(
-    paneOrder(view.calls),
-    view.selected,
-    view.rows - CHROME_ROWS,
+  const groups = groupsOf(view.calls, view.agents, view.now);
+  const layout = paneLayoutOf(groups, view.folds, {
+    selected: view.selected,
+    budget: view.rows - CHROME_ROWS,
+  });
+  const stoppable = layout.items.filter(
+    (item) => item.kind === "row" && canStop(item.call),
   );
-  const stoppable = shown.filter(
-    (call) => call.taskId !== undefined && canStop(call),
-  );
-  const stopKey = stoppable.length === 1 ? (stoppable[0]?.id ?? "") : "";
+  const only = stoppable.length === 1 ? stoppable[0] : undefined;
+  const context: RowContext = {
+    view,
+    act,
+    stopKey: only?.kind === "row" ? only.call.id : "",
+    fit: layout,
+  };
   return (
     <Box flexDirection="column">
-      {toolbarOf(kit, act)}
-      {shown.length === 0 && <Text dimColor>No Bash calls yet.</Text>}
-      {shown.map((call, index) =>
-        rowOf(
-          kit,
-          { view, act, stopKey, fit: { isCompact, detailRoom } },
-          { call, index },
-        ),
+      {toolbarOf(kit, act, layout.items)}
+      {layout.items.length === 0 && <Text dimColor>No Bash calls yet.</Text>}
+      {layout.items.map((item, index) =>
+        item.kind === "header"
+          ? headerOf(kit, { view, act }, { ...item, index })
+          : rowOf(kit, context, { call: item.call, index }),
       )}
-      {hidden > 0 && <Text dimColor>{`+${String(hidden)} older`}</Text>}
+      {layout.hidden > 0 && (
+        <Text dimColor>{`+${String(layout.hidden)} older`}</Text>
+      )}
       <Text dimColor wrap="truncate-end">
         {fit(view.isFocused ? HINT_FOCUSED : HINT_UNFOCUSED, view.columns)}
       </Text>

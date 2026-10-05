@@ -1,7 +1,6 @@
 import { expect, test } from "claude-code/testing";
 
 import {
-  agentLabelOf,
   exitCodeOf,
   labelOf,
   lastLines,
@@ -102,12 +101,6 @@ test("a task notification gives its task, status and exit code", () => {
     ]),
   ).toEqual([{ taskId: "t2", status: "killed" }]);
   expect(noticesOf(["plain text"])).toEqual([]);
-});
-
-test("a subagent is labelled by its type and description", () => {
-  const agents = [{ id: "a1", type: "codex-runner", description: "Review" }];
-  expect(agentLabelOf(agents, "a1")).toBe("codex-runner: Review");
-  expect(agentLabelOf(agents, "a9")).toBe("agent a9");
 });
 
 test("a runner is found inside a shell wrapper, the guard's included", () => {

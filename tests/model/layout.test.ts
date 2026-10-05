@@ -5,7 +5,6 @@ import {
   oneLine,
   paneOrder,
   rowsOf,
-  rowsWantedOf,
   tailFit,
   visibleOf,
 } from "../../hooks/model/layout.ts";
@@ -131,18 +130,4 @@ test("compact, a live runner still shows its last line", () => {
   const tight = visibleOf(ordered, "", 3);
   expect(tight.shown.map((call) => call.id)).toEqual(["codex"]);
   expect(tight.hidden).toBe(2);
-});
-
-test("the height asked on open fits every row in full, within bounds", () => {
-  expect(rowsWantedOf([])).toBe(6);
-  const two = [
-    callOf({ id: "a", tail: ["x"] }),
-    callOf({ id: "b", status: "done" }),
-  ];
-  // toolbar and hint 2 + a: head, source, note 3 + b: head, source 2
-  expect(rowsWantedOf(two)).toBe(7);
-  const many = Array.from({ length: 40 }, (_, index) =>
-    callOf({ id: `c${String(index)}`, status: "done" }),
-  );
-  expect(rowsWantedOf(many)).toBe(30);
 });

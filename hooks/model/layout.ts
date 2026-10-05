@@ -187,18 +187,3 @@ export const tailFit = (
   const cut = [`… ${String(lines.length - count)} earlier lines`, ...newest];
   return lines.length <= room ? lines : cut.slice(0, Math.max(0, room));
 };
-
-const CHROME = 2;
-const ROWS_MIN = 6;
-const ROWS_MAX = 30;
-
-/**
- * The body rows to ask for when the pane opens inline: every row in full,
- * with the toolbar and the hint, at least 6 and at most 30.
- * @param calls the list
- * @returns the rows
- */
-export const rowsWantedOf = (calls: readonly ShellCall[]): number => {
-  const full = CHROME + sumOf(calls.map((call) => rowsOf(call, "")));
-  return Math.min(ROWS_MAX, Math.max(ROWS_MIN, full));
-};

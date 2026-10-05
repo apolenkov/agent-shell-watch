@@ -78,7 +78,7 @@ test("calls made before the mod loaded are rebuilt once, reload or not", async (
   expect(text).toContain("— exit 0\nE2E");
   expect(text).toContain("— no output\nWait");
   expect(text).toContain("— DONE 0\npi · list mods");
-  expect(text).toContain("pi-runner: List mods · pi -p 'list mods'");
+  expect(text).toContain("pi-runner: List mods");
   expect(text).not.toContain("Never");
   const buttons = await pane.findAll({ type: "Button" });
   const rows = buttons.filter(

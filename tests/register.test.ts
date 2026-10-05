@@ -38,7 +38,7 @@ test("a Bash call shows while it runs and settles with its exit", async ($, on) 
     command: "npm test",
     description: "Run tests",
   });
-  expect(seen.statuses).toContain("◐ Run tests 0:01");
+  expect(seen.statuses).toContain("◐ main · Run tests 0:01");
   await advance(clock, 1000);
   expect(seen.statuses.at(-1)).toBeUndefined();
   expect(await textOf(await paneOf($, "terminal"))).toContain(
@@ -57,7 +57,7 @@ test("a failed call stays on the status line for 2 minutes", async ($, on) => {
   await $.session.start(START);
   await $.tool.call({ tool: "Bash", command: "tsc", description: "Typecheck" });
   await advance(clock, 1000);
-  expect(seen.statuses.at(-1)).toBe("✗ Typecheck exit 2");
+  expect(seen.statuses.at(-1)).toBe("✗ main · Typecheck exit 2");
   await advance(clock, 2 * MIN);
   expect(seen.statuses.at(-1)).toBeUndefined();
 });
@@ -74,12 +74,12 @@ test("a background run keeps running until its notification", async ($, on) => {
     run_in_background: true,
   });
   await advance(clock, 1000);
-  expect(seen.statuses.at(-1)).toBe("◐ E2E 0:01 · no output · 1s");
+  expect(seen.statuses.at(-1)).toBe("◐ main · E2E 0:01 · no output · 1s");
   const pane = await paneOf($, "terminal");
-  expect(await textOf(pane)).toContain("bg · main · npm run e2e");
+  expect(await textOf(pane)).toContain("bg · npm run e2e");
   await notify($, NOTICE);
   await advance(clock, 1000);
-  expect(seen.statuses.at(-1)).toBe("✗ E2E exit 3");
+  expect(seen.statuses.at(-1)).toBe("✗ main · E2E exit 3");
   expect(await textOf(pane)).toContain("0:01 exit 3\nE2E");
 });
 
@@ -102,11 +102,11 @@ test(
       description: "Wait",
     });
     await advance(clock, 2000);
-    expect(seen.statuses.at(-1)).toBe("◐ Wait 0:02 · output 2s ago");
+    expect(seen.statuses.at(-1)).toBe("◐ main · Wait 0:02 · output 2s ago");
     await advance(clock, 2000);
-    expect(seen.statuses.at(-1)).toBe("⚠ quiet 4s Wait 0:04");
+    expect(seen.statuses.at(-1)).toBe("⚠ quiet 4s main · Wait 0:04");
     await advance(clock, 4000);
-    expect(seen.statuses.at(-1)).toBe("⚠ hung 8s Wait");
+    expect(seen.statuses.at(-1)).toBe("⚠ hung 8s main · Wait");
   },
 );
 
@@ -129,8 +129,10 @@ test(
       command: "node w.ts --watch-file /t/none.log -- codex exec go",
       description: "Review",
     });
-    expect(seen.statuses).toContain("◐ codex · Review 0:02 · no output · 2s");
-    expect(seen.statuses).toContain("⚠ quiet 4s codex · Review 0:04");
+    expect(seen.statuses).toContain(
+      "◐ main · codex · Review 0:02 · no output · 2s",
+    );
+    expect(seen.statuses).toContain("⚠ quiet 4s main · codex · Review 0:04");
     expect(await textOf(await paneOf($, "terminal"))).toContain(
       "0:07 DONE 0\ncodex · Review",
     );
@@ -151,7 +153,7 @@ test("a runner's last line and freshness lead the status line", async ($, on) =>
   seen.tails.set("/t/b1.output", "reading\npatching src/a.ts\n");
   await advance(clock, 4000);
   expect(seen.statuses.at(-1)).toBe(
-    "◐ pi · Pi fix 0:04 · output 2s ago · › patching src/a.ts",
+    "◐ main · pi · Pi fix 0:04 · output 2s ago · › patching src/a.ts",
   );
 });
 
@@ -168,7 +170,9 @@ test("a runner's verdict is read once its background run ends", async ($, on) =>
   seen.tails.set("/t/b1.output", "work\nRATE_LIMIT 1790000000\n");
   await notify($, NOTICE);
   await advance(clock, 2000);
-  expect(seen.statuses.at(-1)).toBe("✗ devin · Go RATE_LIMIT 1790000000");
+  expect(seen.statuses.at(-1)).toBe(
+    "✗ main · devin · Go RATE_LIMIT 1790000000",
+  );
 });
 
 test("after a reload the poller resumes running calls", FAST, async ($, on) => {
@@ -180,7 +184,7 @@ test("after a reload the poller resumes running calls", FAST, async ($, on) => {
   await $.tool.call({ tool: "Bash", command: "sleep 9", description: "Wait" });
   await $.session.start(START);
   await advance(clock, 4000);
-  expect(seen.statuses.at(-1)).toMatch(/^⚠ quiet 4s Wait/u);
+  expect(seen.statuses.at(-1)).toMatch(/^⚠ quiet 4s main · Wait/u);
 });
 
 test("a foreground runner's live line comes from its watch file", async ($, on) => {
@@ -202,7 +206,7 @@ test("a foreground runner's live line comes from its watch file", async ($, on) 
     description: "Review",
   });
   expect(seen.statuses).toContain(
-    "◐ codex · Review 0:02 · output 1s ago · › editing src/b.ts",
+    "◐ main · codex · Review 0:02 · output 1s ago · › editing src/b.ts",
   );
 });
 
@@ -253,7 +257,7 @@ test("a refused call is denied: dim in the pane, never on the status line", asyn
     description: "Echo test",
   });
   await advance(clock, 1000);
-  expect(seen.statuses.at(-1)).toBe("◐ Wait 0:01 · no output · 1s");
+  expect(seen.statuses.at(-1)).toBe("◐ main · Wait 0:01 · no output · 1s");
   expect(await textOf(await paneOf($, "terminal"))).toContain(
     "0:00 denied\nEcho test",
   );

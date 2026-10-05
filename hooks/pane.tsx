@@ -1,13 +1,13 @@
 /**
  * The pane's drawing: reads the calls and the pane's state, and hands the
- * view its button handlers (clear, close, select, stop).
+ * view its button handlers (fold, clear, close, select, stop).
  */
 import type { EngineInterface, RenderElement, RenderInput } from "claude-code";
 import { atom, read, update } from "claude-code";
 
 import type { ShellAgents, ShellCall } from "../types";
 import { finishedIds, liveOnly, noticed, tailed } from "./model/calls.ts";
-import { paneTree } from "./view/pane.tsx";
+import { type PaneActions, paneTree } from "./view/pane.tsx";
 
 const NO_CALLS: readonly ShellCall[] = [];
 const NO_AGENTS: ShellAgents = {};
@@ -23,8 +23,13 @@ const clearedAtom = atom(
 );
 
 const agentsAtom = atom(
-  { plugin: "agent-shell-watch", key: "agents" } as const,
+  { plugin: "agent-shell-watch", key: "agentInfo" } as const,
   NO_AGENTS,
+);
+const NO_FOLDS: Readonly<Record<string, boolean>> = {};
+const foldsAtom = atom(
+  { plugin: "agent-shell-watch", key: "folds" } as const,
+  NO_FOLDS,
 );
 const nowAtom = atom({ plugin: "agent-shell-watch", key: "now" } as const, 0);
 const openAtom = atom(
@@ -94,6 +99,38 @@ const close = async ($: Engine): Promise<void> => {
   await $.ui.close({ id: PANE });
 };
 
+const setFolds = async (
+  $: Engine,
+  keys: readonly string[],
+  isFolded: boolean,
+): Promise<void> => {
+  await update($, foldsAtom, (folds) => ({
+    ...folds,
+    ...Object.fromEntries(keys.map((key) => [key, isFolded])),
+  }));
+};
+
+const actionsOf = ($: Engine): PaneActions => ({
+  clear: () => {
+    void clearCalls($);
+  },
+  close: () => {
+    void close($);
+  },
+  select: (id) => {
+    void select($, id);
+  },
+  stop: (taskId) => {
+    void stop($, taskId);
+  },
+  fold: (key, isFolded) => {
+    void setFolds($, [key], isFolded);
+  },
+  foldAll: (keys, isFolded) => {
+    void setFolds($, keys, isFolded);
+  },
+});
+
 /**
  * `ui.render` of the `agent-shell-watch` pane.
  * @param $ the engine
@@ -112,25 +149,13 @@ export const onRender = async (
     {
       calls,
       agents: await read($, agentsAtom),
+      folds: await read($, foldsAtom),
       now,
       selected: await read($, selectedAtom),
       columns: e.props.bodyColumns,
       rows: e.props.scroll.bodyRows,
       isFocused: e.props.isFocused,
     },
-    {
-      clear: () => {
-        void clearCalls($);
-      },
-      close: () => {
-        void close($);
-      },
-      select: (id) => {
-        void select($, id);
-      },
-      stop: (taskId) => {
-        void stop($, taskId);
-      },
-    },
+    actionsOf($),
   );
 };

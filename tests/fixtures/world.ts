@@ -12,6 +12,8 @@ export interface World {
   readonly focused: boolean[];
   /** The `rows` each `$.ui.open` asked for (undefined when none). */
   readonly rows: (number | undefined)[];
+  /** Set to make `$.agent.list()` fail. */
+  isAgentListDown: boolean;
   /** What `$.session.messages()` answers, by agent id ("" for the main loop). */
   readonly transcripts: Map<string, unknown[]>;
 }
@@ -39,6 +41,7 @@ export const world = (
     opened: [],
     focused: [],
     rows: [],
+    isAgentListDown: false,
     transcripts: new Map(),
   };
   on("session.start", (_$, e) => ({ cwd: e.cwd }));
@@ -54,7 +57,12 @@ export const world = (
     return { value: { isPlaced: true } };
   });
   on("ui.close", () => ({ value: undefined }));
-  on("agent.list", () => ({ value: agents }));
+  on("agent.list", () => {
+    if (seen.isAgentListDown) {
+      throw new Error("agent list unavailable");
+    }
+    return { value: agents };
+  });
   on("session.messages", (_$, e) => ({
     value: (seen.transcripts.get(e.agentId ?? "") ?? []) as SessionMessage[],
   }));

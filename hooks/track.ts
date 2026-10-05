@@ -16,13 +16,14 @@ import { atom, read, update } from "claude-code";
 import type { ShellAgents, ShellCall } from "../types";
 import { noticed, settled, started, trimmed } from "./model/calls.ts";
 import { configOf } from "./model/config.ts";
+import { agentTableOf } from "./model/groups.ts";
 import { outcomeOf } from "./model/outcome.ts";
-import { agentLabelOf, noticesOf } from "./model/parse.ts";
+import { noticesOf } from "./model/parse.ts";
 
 const NO_CALLS: readonly ShellCall[] = [];
 const NO_AGENTS: ShellAgents = {};
 const agentsAtom = atom(
-  { plugin: "agent-shell-watch", key: "agents" } as const,
+  { plugin: "agent-shell-watch", key: "agentInfo" } as const,
   NO_AGENTS,
 );
 const callsAtom = atom(
@@ -43,8 +44,8 @@ const nameAgent = async (
     return;
   }
   try {
-    const label = agentLabelOf(await $.agent.list(), agentId);
-    await update($, agentsAtom, (agents) => ({ ...agents, [agentId]: label }));
+    const listed = agentTableOf(await $.agent.list());
+    await update($, agentsAtom, (agents) => ({ ...agents, ...listed }));
   } catch {
     // Unnamed: the pane falls back to `agent <id>`.
   }

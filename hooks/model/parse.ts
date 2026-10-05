@@ -186,29 +186,6 @@ export const noticesOf = (texts: readonly string[]): readonly TaskNotice[] =>
 export const backgroundIdOf = (text: string): string | undefined =>
   BACKGROUND_ID.exec(text)?.[1];
 
-/** What `$.agent.list()` says of one subagent. */
-export interface AgentEntry {
-  readonly id: string;
-  readonly type: string;
-  readonly description: string;
-}
-
-/**
- * A subagent's label: `type: description`, else `agent <id>`.
- * @param agents the session's subagents
- * @param id the subagent's id
- * @returns the label
- */
-export const agentLabelOf = (
-  agents: readonly AgentEntry[],
-  id: string,
-): string => {
-  const found = agents.find((agent) => agent.id === id);
-  return found === undefined
-    ? `agent ${id}`
-    : `${found.type}: ${found.description}`;
-};
-
 const QUOTED = /'[^']*'|"(?:[^"\\]|\\.)*"/gu;
 const SEARCHES: ReadonlySet<string> = new Set([
   "grep",

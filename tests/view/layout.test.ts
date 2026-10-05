@@ -67,7 +67,7 @@ for (const surface of SURFACES) {
       const rows = buttons.filter(
         (button) => button.key?.startsWith("row:") === true,
       );
-      expect(rows[0]?.props["hotkey"]).toBe("1");
+      expect(rows[0]?.props["hotkey"]).toBe("2");
       expect(texts.some((t) => t.text.startsWith("Wa"))).toBe(true);
       if (columns === 40) {
         expect(
@@ -104,7 +104,7 @@ for (const surface of SURFACES) {
       description: "Wait",
       run_in_background: true,
     });
-    const pane = await paneOf($, surface, { columns: 80, rows: 6 });
+    const pane = await paneOf($, surface, { columns: 80, rows: 7 });
     const found = await pane.findAll({ type: "Text" });
     const texts = found.map((t) => t.text);
     expect(texts.indexOf("Wait")).toBeLessThan(texts.indexOf("Old 5"));

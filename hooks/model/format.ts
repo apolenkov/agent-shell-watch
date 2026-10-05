@@ -121,10 +121,10 @@ const freshOf = (call: ShellCall, now: number): string =>
     ? silenceOf(call, now)
     : `output ${agoOf(now - call.lastOutputAt)} ago`;
 
-const runningSegment = (call: ShellCall, now: number): string => {
+const runningSegment = (call: ShellCall, now: number, name: string): string => {
   const says = saysOf(call);
   return [
-    `◐ ${nameOf(call)} ${elapsedOf(call, now)}`,
+    `◐ ${name} ${elapsedOf(call, now)}`,
     freshOf(call, now),
     ...(says === undefined ? [] : [`› ${cut(says, SAYS_MAX)}`]),
   ]
@@ -180,18 +180,33 @@ export const noteOf = (call: ShellCall): Note | undefined => {
 };
 
 const SEGMENT: Readonly<
-  Record<ShellStatus, (call: ShellCall, now: number) => string>
+  Record<ShellStatus, (call: ShellCall, now: number, name: string) => string>
 > = {
   running: runningSegment,
-  quiet: (call, now) =>
-    `⚠ quiet ${silentOf(call, now)} ${nameOf(call)} ${elapsedOf(call, now)}`,
-  hung: (call, now) => `⚠ hung ${silentOf(call, now)} ${nameOf(call)}`,
-  failed: (call) => `✗ ${nameOf(call)} ${outcomeOf(call)}`.trimEnd(),
-  done: (call) => `● ${nameOf(call)}`,
-  stopped: (call) => `○ ${nameOf(call)}`,
-  denied: (call) => `○ ${nameOf(call)} denied`,
-  nomatch: (call) => `○ ${nameOf(call)} no match`,
+  quiet: (call, now, name) =>
+    `⚠ quiet ${silentOf(call, now)} ${name} ${elapsedOf(call, now)}`,
+  hung: (call, now, name) => `⚠ hung ${silentOf(call, now)} ${name}`,
+  failed: (call, _now, name) => `✗ ${name} ${outcomeOf(call)}`.trimEnd(),
+  done: (_call, _now, name) => `● ${name}`,
+  stopped: (_call, _now, name) => `○ ${name}`,
+  denied: (_call, _now, name) => `○ ${name} denied`,
+  nomatch: (_call, _now, name) => `○ ${name} no match`,
 };
+
+const MAIN = "main";
+const OWNER_MAX = 16;
+
+/** What the status line needs of an agent: its type. */
+export type OwnerTable = Readonly<Record<string, Readonly<{ type: string }>>>;
+
+/**
+ * Whose a call is, in a word: `main`, the agent's type, or `agent <id>`.
+ * @param key the call's `agentId`, or `main`
+ * @param agents the known agents
+ * @returns the owner
+ */
+export const ownerOf = (key: string, agents: OwnerTable): string =>
+  key === MAIN ? MAIN : (agents[key]?.type ?? `agent ${key}`);
 
 interface Counted {
   readonly status: ShellStatus;
@@ -224,11 +239,13 @@ const countsOf = (rest: readonly ShellCall[]): readonly string[] =>
  * The always-on line: the most urgent call in full, the rest counted.
  * @param calls the list
  * @param now the clock's time
+ * @param agents the known agents, to say whose the leading call is
  * @returns the line, or undefined when nothing runs or recently failed
  */
 export const statusLineOf = (
   calls: readonly ShellCall[],
   now: number,
+  agents: OwnerTable = {},
 ): string | undefined => {
   const shown = urgencyOrder(
     calls.filter(
@@ -239,7 +256,11 @@ export const statusLineOf = (
     ),
   );
   const [head, ...rest] = shown;
+  const owner = cut(ownerOf(head?.agentId ?? MAIN, agents), OWNER_MAX);
   return head === undefined
     ? undefined
-    : [SEGMENT[head.status](head, now), ...countsOf(rest)].join(" · ");
+    : [
+        SEGMENT[head.status](head, now, `${owner} · ${nameOf(head)}`),
+        ...countsOf(rest),
+      ].join(" · ");
 };

@@ -11,10 +11,11 @@ import type {
 } from "claude-code";
 import { atom, read, update } from "claude-code";
 
-import type { ShellCall } from "../types";
+import type { ShellAgents, ShellCall } from "../types";
 import { finishedIds, liveOnly } from "./model/calls.ts";
 import { configOf } from "./model/config.ts";
-import { rowsWantedOf } from "./model/layout.ts";
+import { groupsOf } from "./model/groups.ts";
+import { rowsWantedOf } from "./model/pane-items.ts";
 
 const NO_CALLS: readonly ShellCall[] = [];
 const callsAtom = atom(
@@ -31,6 +32,16 @@ const clearedAtom = atom(
 const configAtom = atom(
   { plugin: "agent-shell-watch", key: "config" } as const,
   configOf({}),
+);
+const NO_AGENTS: ShellAgents = {};
+const agentsAtom = atom(
+  { plugin: "agent-shell-watch", key: "agentInfo" } as const,
+  NO_AGENTS,
+);
+const NO_FOLDS: Readonly<Record<string, boolean>> = {};
+const foldsAtom = atom(
+  { plugin: "agent-shell-watch", key: "folds" } as const,
+  NO_FOLDS,
 );
 const openAtom = atom(
   { plugin: "agent-shell-watch", key: "isOpen" } as const,
@@ -79,7 +90,14 @@ export const onCommand = async (
     return { text: "finished calls cleared" };
   }
   const { columns } = await read($, configAtom);
-  const rows = rowsWantedOf(await read($, callsAtom));
+  const rows = rowsWantedOf(
+    groupsOf(
+      await read($, callsAtom),
+      await read($, agentsAtom),
+      await $.clock.now(),
+    ),
+    await read($, foldsAtom),
+  );
   const opened = await $.ui.open({
     id: PANE,
     title: "shell-watch",

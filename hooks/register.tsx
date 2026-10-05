@@ -12,8 +12,8 @@ import { backfilled, merged, type MessageRow } from "./model/backfill.ts";
 import { classified, hasLive, polled, tailed } from "./model/calls.ts";
 import { type Config, configOf } from "./model/config.ts";
 import { statusLineOf } from "./model/format.ts";
-import { rowsWantedOf } from "./model/layout.ts";
-import { agentLabelOf } from "./model/parse.ts";
+import { agentTableOf, groupsOf } from "./model/groups.ts";
+import { rowsWantedOf } from "./model/pane-items.ts";
 import { isTailDue, tailPathOf, watchedOf } from "./model/poll.ts";
 import { onRender } from "./pane.tsx";
 import { onClose, onCommand, PANE } from "./slash-command.ts";
@@ -38,8 +38,13 @@ const configAtom = atom(
 );
 const nowAtom = atom({ plugin: "agent-shell-watch", key: "now" } as const, 0);
 const agentsAtom = atom(
-  { plugin: "agent-shell-watch", key: "agents" } as const,
+  { plugin: "agent-shell-watch", key: "agentInfo" } as const,
   NO_AGENTS,
+);
+const NO_FOLDS: Readonly<Record<string, boolean>> = {};
+const foldsAtom = atom(
+  { plugin: "agent-shell-watch", key: "folds" } as const,
+  NO_FOLDS,
 );
 const openAtom = atom(
   { plugin: "agent-shell-watch", key: "isOpen" } as const,
@@ -52,13 +57,37 @@ const TAIL_LINES = "40";
 
 type Engine = Readonly<EngineInterface>;
 
+// undefined when the list fails, so the last snapshot stays.
+const agentsOf = async (
+  $: Engine,
+): Promise<readonly AgentInfo[] | undefined> => {
+  try {
+    return await $.agent.list();
+  } catch {
+    return;
+  }
+};
+
+// The list's entries win: they carry the agents' fresh status.
+const refreshAgents = async (
+  $: Engine,
+  listed: readonly AgentInfo[] | undefined,
+): Promise<void> => {
+  if (listed === undefined) {
+    return;
+  }
+  const table = agentTableOf(listed);
+  await update($, agentsAtom, (known) => ({ ...known, ...table }));
+};
+
 const tick = async ($: Engine, config: Config): Promise<void> => {
   const now = await $.clock.now();
   const calls = await read($, callsAtom);
   if (hasLive(calls)) {
     await update($, nowAtom, () => now);
   }
-  $.ui.status(config.statusLine ? statusLineOf(calls, now) : undefined);
+  const agents = await read($, agentsAtom);
+  $.ui.status(config.statusLine ? statusLineOf(calls, now, agents) : undefined);
 };
 
 const tailOf = async ($: Engine, path: string): Promise<string | undefined> => {
@@ -118,6 +147,10 @@ const poll = async ($: Engine, config: Config): Promise<void> => {
   await update($, callsAtom, (calls) =>
     calls.map((call) => classified(call, now, config.limits)),
   );
+  // Subagents' statuses feed their groups' rollups.
+  if (calls.some((call) => call.agentId !== undefined)) {
+    await refreshAgents($, await agentsOf($));
+  }
   // The status line shows what this poll found, not only the next tick.
   await tick($, config);
 };
@@ -130,7 +163,14 @@ const restore = async ($: Engine, config: Config): Promise<void> => {
   if (!isOpen) {
     return;
   }
-  const rows = rowsWantedOf(await read($, callsAtom));
+  const rows = rowsWantedOf(
+    groupsOf(
+      await read($, callsAtom),
+      await read($, agentsAtom),
+      await $.clock.now(),
+    ),
+    await read($, foldsAtom),
+  );
   await $.ui.open({
     id: PANE,
     title: "shell-watch",
@@ -155,32 +195,19 @@ const rowsOf = async (
   }
 };
 
-const agentsOf = async ($: Engine): Promise<readonly AgentInfo[]> => {
-  try {
-    return await $.agent.list();
-  } catch {
-    return [];
-  }
-};
-
 // Calls made before the mod loaded (enabled mid-session, a reload, an
 // update): rebuilt from the main transcript and each running agent's.
 const backfill = async ($: Engine, config: Config): Promise<void> => {
   const now = await $.clock.now();
   const listed = await agentsOf($);
-  const agents = listed.filter((agent) => agent.status === "running");
+  await refreshAgents($, listed);
+  const agents = (listed ?? []).filter((agent) => agent.status === "running");
   const main = backfilled(await rowsOf($), undefined, now);
   const subs = await Promise.all(
     agents.map(async (agent) =>
       backfilled(await rowsOf($, agent.id), agent.id, now),
     ),
   );
-  await update($, agentsAtom, (known) => ({
-    ...Object.fromEntries(
-      agents.map((agent) => [agent.id, agentLabelOf(agents, agent.id)]),
-    ),
-    ...known,
-  }));
   const cleared = await read($, clearedAtom);
   await update($, callsAtom, (calls) =>
     merged(calls, [...main, ...subs.flat()], {

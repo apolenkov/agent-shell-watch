@@ -50,15 +50,24 @@ export interface ShellConfig {
   readonly statusLine: boolean;
 }
 
-/** Subagent ids mapped to what spawned them (`type: description`). */
-export type ShellAgents = Readonly<Record<string, string>>;
+/** What `$.agent.list()` said of one subagent. */
+export interface ShellAgentInfo {
+  readonly type: string;
+  readonly description: string;
+  readonly status: string;
+  readonly parentId?: string;
+}
+
+/** Subagent ids mapped to what `$.agent.list()` said of them. */
+export type ShellAgents = Readonly<Record<string, ShellAgentInfo>>;
 
 declare module "claude-code" {
   interface PluginState {
     "agent-shell-watch": {
       config: ShellConfig;
       calls: readonly ShellCall[];
-      agents: ShellAgents;
+      agentInfo: ShellAgents;
+      folds: Readonly<Record<string, boolean>>;
       now: number;
       isOpen: boolean;
       selected: string;

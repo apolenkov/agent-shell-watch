@@ -44,9 +44,9 @@ for (const surface of SURFACES) {
     expect(all).toContain("0:00 exit 0");
     expect(all).toContain("List");
     expect(all).toContain("codex · Codex review");
-    expect(all).toContain("main · ls");
+    expect(all).toContain("ls");
 
-    expect(all).toContain("bg · main · codex exec review");
+    expect(all).toContain("bg · codex exec review");
     expect(await pane.find({ key: "filter" })).toBeUndefined();
     expect(all).not.toContain("background only");
 
@@ -120,11 +120,11 @@ for (const surface of SURFACES) {
     const toggle = buttons.find(
       (button) => button.key?.startsWith("row:") === true,
     );
-    expect(toggle?.text).toBe("1 ▸");
+    expect(toggle?.text).toBe("2 ▸");
     expect(toggle?.props["plain"]).toBeUndefined();
     await pane.press({ key: toggle?.key ?? "" });
     const expanded = await pane.find({ key: toggle?.key ?? "" });
-    expect(expanded?.text).toBe("1 ▾");
+    expect(expanded?.text).toBe("2 ▾");
     expect(await textOf(pane)).toContain("$ ls -la");
   });
 }
@@ -224,28 +224,30 @@ for (const surface of SURFACES) {
       (button) => button.key?.startsWith("row:") === true,
     );
     expect(rows.map((row) => row.props["hotkey"])).toEqual([
-      "1",
       "2",
       "3",
       "4",
+      "5",
     ]);
     const stop = buttons.find(
       (button) => button.key?.startsWith("stop:") === true,
     );
     expect(stop?.props["hotkey"]).toBe("s");
-    expect(texts).toContain("1–9 open · c clear · q close · Esc → prompt");
+    expect(texts).toContain(
+      "1–9 open · f fold · c clear · q close · Esc → prompt",
+    );
     const labels = Object.fromEntries(
       buttons.map((button) => [button.key ?? "", button.text]),
     );
     expect(labels["clear"]).toBe("c clear");
     expect(labels["close"]).toBe("q close");
     expect(stop?.text).toBe("s stop");
-    expect(rows.map((row) => row.text)).toEqual(["1 ▸", "2 ▸", "3 ▸", "4 ▸"]);
-    expect(rows.map((row) => row.props["autoFocus"])).toEqual([
+    expect(rows.map((row) => row.text)).toEqual(["2 ▸", "3 ▸", "4 ▸", "5 ▸"]);
+    // The first line, main's header, holds the focus.
+    expect(rows.every((row) => row.props["autoFocus"] === undefined)).toBe(
       true,
-      undefined,
-      undefined,
-      undefined,
-    ]);
+    );
+    const header = buttons.find((button) => button.key === "group:main");
+    expect(header?.props["autoFocus"]).toBe(true);
   });
 }

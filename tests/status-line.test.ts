@@ -20,5 +20,5 @@ test("the status line is set again on every tick, even when unchanged", async ($
   await advance(clock, 3000);
   const after = seen.statuses.slice(before);
   expect(after.length).toBeGreaterThanOrEqual(3);
-  expect([...new Set(after)]).toEqual(["✗ Typecheck exit 2"]);
+  expect([...new Set(after)]).toEqual(["✗ main · Typecheck exit 2"]);
 });
