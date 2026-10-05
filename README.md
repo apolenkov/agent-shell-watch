@@ -3,6 +3,13 @@
   <img alt="agent-shell-watch: see at a glance that your shells and delegated agents are moving" src=".github/assets/banner-light.svg" width="100%">
 </picture>
 
+![agent-shell-watch demo: a background Codex review ticking in the status line, the /shell-watch pane, and the runners view with verdicts (FAILED, WAITING), tokens and subscription limits](demo/demo.gif)
+
+<sub>Recorded with [vhs](https://github.com/charmbracelet/vhs) from
+[`demo/demo.tape`](demo/demo.tape); `codex`, `pi` and `devin` are stand-ins
+from `demo/bin` with synthetic sessions and limits, so the recording is free
+and repeatable.</sub>
+
 [![ci](https://github.com/apolenkov/agent-shell-watch/actions/workflows/ci.yml/badge.svg)](https://github.com/apolenkov/agent-shell-watch/actions/workflows/ci.yml)
 [![codeql](https://github.com/apolenkov/agent-shell-watch/actions/workflows/codeql.yml/badge.svg)](https://github.com/apolenkov/agent-shell-watch/actions/workflows/codeql.yml)
 [![release](https://img.shields.io/github/v/release/apolenkov/agent-shell-watch?sort=semver)](https://github.com/apolenkov/agent-shell-watch/releases)
@@ -14,12 +21,6 @@ A [Claude Code](https://claude.com/claude-code) mod that watches this
 session's Bash calls (main loop and every subagent), background tasks and,
 above all, the agent runs you delegate through the shell: Codex, Pi, Devin and
 OpenCodeReview (`ocr`).
-
-![agent-shell-watch: a background Codex review ticking with its current file, a failed typecheck, the status line, the runners view](demo/demo.gif)
-
-<sub>Recorded with [vhs](https://github.com/charmbracelet/vhs) from
-[`demo/demo.tape`](demo/demo.tape); `codex` and `tsc` are stand-ins from
-`demo/bin` so the recording is free and repeatable.</sub>
 
 ## Why
 
