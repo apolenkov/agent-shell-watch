@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.5](https://github.com/apolenkov/agent-shell-watch/compare/v0.5.4...v0.5.5) (2026-10-05)
+
+
+### Bug Fixes
+
+* **agent-shell-watch:** keep the exit note of a background task out of the output tail ([#55](https://github.com/apolenkov/agent-shell-watch/issues/55)) ([e9fd29e](https://github.com/apolenkov/agent-shell-watch/commit/e9fd29eb19c46f22286168b83db40d5ffae52981))
+* **ci:** give the night-fix verify agent a step budget and count a missing verdict as infrastructure ([#57](https://github.com/apolenkov/agent-shell-watch/issues/57)) ([11b02ba](https://github.com/apolenkov/agent-shell-watch/commit/11b02ba0d190622e88638e7dd8ddeccfc4d0d186))
+
 ## [0.5.4](https://github.com/apolenkov/agent-shell-watch/compare/v0.5.3...v0.5.4) (2026-10-05)
 
 
