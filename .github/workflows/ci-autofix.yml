@@ -11,11 +11,25 @@ on:
   workflow_run:
     workflows: [ci]
     types: [completed]
+  # The next attempt: events caused by GITHUB_TOKEN start no workflow_run, so the
+  # push job dispatches this itself when the re-run ci is red. Anyone who can
+  # dispatch can also push; the gate re-checks everything either way.
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Failed ci run to repair
+        required: true
+      branch:
+        description: Head branch of that run
+        required: true
+      sha:
+        description: Head commit of that run
+        required: true
 
 permissions: {}
 
 concurrency:
-  group: ci-autofix-${{ github.event.workflow_run.head_branch }}
+  group: ci-autofix-${{ github.event.workflow_run.head_branch || inputs.branch }}
   cancel-in-progress: false
 
 env:
@@ -59,7 +73,7 @@ env:
 
 jobs:
   gate:
-    if: github.event.workflow_run.conclusion == 'failure'
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'failure'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -67,6 +81,8 @@ jobs:
       actions: read
     outputs:
       pr: ${{ steps.gate.outputs.pr }}
+      run_id: ${{ steps.gate.outputs.run_id }}
+      branch: ${{ steps.gate.outputs.branch }}
       sha: ${{ steps.gate.outputs.sha }}
       attempt: ${{ steps.gate.outputs.attempt }}
       go: ${{ steps.gate.outputs.go }}
@@ -76,12 +92,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch || inputs.branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha || inputs.sha }}
         run: |
           set -euo pipefail
           echo "go=false" >> "$GITHUB_OUTPUT"
+          # Dispatch inputs are not trusted: the run must be a ci run of this very commit.
+          run_ok=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq '.name == "ci" and .head_sha == env.HEAD_SHA and .head_branch == env.HEAD_BRANCH' || echo false)
+          [ "$run_ok" = true ] || { echo "run $RUN_ID is not a ci run of $HEAD_BRANCH@$HEAD_SHA"; exit 0; }
           owner="${REPO%%/*}"
           pr=$(gh api -X GET "repos/$REPO/pulls" -f state=open -f head="$owner:$HEAD_BRANCH" --jq '.[0] // empty')
           [ -n "$pr" ] || { echo "no open PR for $HEAD_BRANCH"; exit 0; }
@@ -103,6 +122,8 @@ jobs:
           done_n=$(grep -c '^Autofix-Attempt: ' <<<"$msgs" || true)
           {
             echo "pr=$number"
+            echo "run_id=$RUN_ID"
+            echo "branch=$HEAD_BRANCH"
             echo "sha=$head_sha"
             echo "attempt=$((done_n + 1))"
           } >> "$GITHUB_OUTPUT"
@@ -133,7 +154,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ID: ${{ needs.gate.outputs.run_id }}
         run: |
           set -euo pipefail
           gh run view "$RUN_ID" -R "$REPO" --log-failed | tail -n 400 | cut -c1-400 > ci-failure.log
@@ -200,7 +221,7 @@ jobs:
     needs: [gate, fix]
     if: needs.fix.result == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     permissions:
       contents: write
       actions: write
@@ -219,7 +240,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_BRANCH: ${{ needs.gate.outputs.branch }}
           ATTEMPT: ${{ needs.gate.outputs.attempt }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           PATCH: ${{ runner.temp }}/patch/fix.patch
@@ -271,10 +292,18 @@ jobs:
             for id in $(gh api "repos/$REPO/actions/runs?head_sha=$sha&status=action_required" --jq '.workflow_runs[].id'); do
               gh api -X POST "repos/$REPO/actions/runs/$id/approve" --silent && approved=$((approved + 1))
             done
-            [ "$approved" -ge 2 ] && break # ci and codeql
+            [ "$approved" -ge 3 ] && break # ci, codeql, dependabot-automerge
             sleep 10
           done
-          [ "$approved" -ge 2 ] || echo "reason=the fix was pushed but its checks could not be approved" >> "$GITHUB_OUTPUT"
+          [ "$approved" -ge 2 ] || { echo "reason=the fix was pushed but its checks could not be approved" >> "$GITHUB_OUTPUT"; exit 0; }
+          # Wait for ci on the new commit; red means the next attempt, started by
+          # dispatch because nothing else will start it (the gate counts attempts).
+          ci_run=$(gh api "repos/$REPO/actions/runs?head_sha=$sha&event=pull_request" --jq '[.workflow_runs[] | select(.name == "ci")] | sort_by(.created_at) | last | .id')
+          if timeout 20m gh run watch "$ci_run" -R "$REPO" --exit-status > /dev/null; then
+            echo "ci is green on $sha"
+          else
+            gh workflow run ci-autofix.yml -R "$REPO" -f run_id="$ci_run" -f branch="$HEAD_BRANCH" -f sha="$sha"
+          fi
 
   escalate:
     needs: [gate, push]
