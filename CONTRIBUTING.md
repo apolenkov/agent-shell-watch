@@ -67,6 +67,8 @@ count stays with the PR, so the bot will not try a third time.
 Labels: `autofix` opts one of your own PRs in; the bot sets `needs-human` when it stops.
 
 The autofix bot never changes workflows, hooks, lint config or the scripts in `package.json`.
+The full list of what the automation may and may not do, how to stop it and what is not yet
+verified: [docs/adr/0001-night-factory-autonomy.md](docs/adr/0001-night-factory-autonomy.md).
 
 `scripts/autofix-report.sh [owner/repo] [days]` reports what Dependabot PRs and the bot did
 over the last days (clean merges, fix commits, `needs-human`, incidents) and says whether
