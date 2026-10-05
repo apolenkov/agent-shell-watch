@@ -29,8 +29,10 @@ fail() { echo "PROBLEM: $1"; problems=$((problems + 1)); }
 # --- preflight: what the workflows need from the target -------------------------------
 note "== preflight $OWNER/$repo"
 [ -z "$HOLD" ] || fail "on hold: $HOLD"
+# The token may sit in environment ci or at repository level; a job with `environment: ci` sees both.
 env_secrets=$(gh api "repos/$OWNER/$repo/environments/ci/secrets" --jq '[.secrets[].name] | join(",")' 2>/dev/null || true)
-case ",$env_secrets," in *,OCR_LLM_AUTH_TOKEN,*) note "ok  environment ci holds OCR_LLM_AUTH_TOKEN" ;; *) fail "environment ci or its secret OCR_LLM_AUTH_TOKEN is missing (only the owner has the token)" ;; esac
+repo_secrets=$(gh api "repos/$OWNER/$repo/actions/secrets" --jq '[.secrets[].name] | join(",")' 2>/dev/null || true)
+case ",$env_secrets,$repo_secrets," in *,OCR_LLM_AUTH_TOKEN,*) note "ok  OCR_LLM_AUTH_TOKEN is set (environment ci or repository)" ;; *) fail "OCR_LLM_AUTH_TOKEN is missing in environment ci and in the repository secrets (only the owner has the token)" ;; esac
 # GraphQL, not REST: the REST sub-endpoint answers 1 for a branch that has no review rule at all.
 reviews=$(gh api graphql -f query="query{repository(owner:\"$OWNER\",name:\"$repo\"){branchProtectionRules(first:10){nodes{pattern requiresApprovingReviews requiredApprovingReviewCount}}}}" \
   --jq '.data.repository.branchProtectionRules.nodes[] | select(.pattern == "main") | if .requiresApprovingReviews then (.requiredApprovingReviewCount // 1) else 0 end')
