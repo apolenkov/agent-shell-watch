@@ -88,6 +88,8 @@ test("exit code is read from an errored result's text", () => {
 test("last lines keep the tail and drop the trailing newline", () => {
   expect(lastLines("a\nb\nc\n", 2)).toEqual(["b", "c"]);
   expect(lastLines("", 2)).toEqual([]);
+  expect(lastLines("a\nb\n[exited with code 78]\n", 2)).toEqual(["a", "b"]);
+  expect(lastLines("[exited with code 0]\n", 2)).toEqual([]);
 });
 
 test("notices are read from row texts, the rest ignored", () => {
