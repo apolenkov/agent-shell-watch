@@ -283,18 +283,19 @@ jobs:
           git push "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "HEAD:refs/heads/${HEAD_BRANCH}" \
             || { echo "branch moved, nothing pushed"; exit 0; }
           # The push starts pull_request runs for this head, but the bot counts as
-          # an outside contributor and they wait for approval, which hides any
+          # an outside contributor and they wait for approval (status completed,
+          # conclusion action_required), which hides any
           # other result for the required checks. The patch passed the guard
           # above, so approve them.
           sha=$(git rev-parse HEAD)
           ready=false
           for _ in $(seq 18); do
             runs=$(gh api "repos/$REPO/actions/runs?head_sha=$sha&event=pull_request" --jq '.workflow_runs')
-            for id in $(jq -r '.[] | select(.status == "action_required") | .id' <<<"$runs"); do
+            for id in $(jq -r '.[] | select(.conclusion == "action_required") | .id' <<<"$runs"); do
               gh api -X POST "repos/$REPO/actions/runs/$id/approve" --silent || true
             done
             # Done when ci and codeql (the required workflows) exist and none waits.
-            if jq -e '[.[].name] as $n | ($n | index("ci")) != null and ($n | index("codeql")) != null and all(.[]; .status != "action_required")' <<<"$runs" > /dev/null; then
+            if jq -e '[.[].name] as $n | ($n | index("ci")) != null and ($n | index("codeql")) != null and all(.[]; .conclusion != "action_required")' <<<"$runs" > /dev/null; then
               ready=true
               break
             fi
