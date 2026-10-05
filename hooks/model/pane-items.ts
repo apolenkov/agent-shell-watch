@@ -103,6 +103,21 @@ export const runnerRowsWantedOf = (runners: readonly Runner[]): number => {
   return Math.min(ROWS_MAX, Math.max(ROWS_MIN, full));
 };
 
+/**
+ * The runner calls the pane can show at its tallest: what the usage reader
+ * is worth spending on (a taller pane than asked for never exists).
+ * @param calls the list
+ * @returns the calls, most urgent first
+ */
+export const shownRunnerCallsOf = (
+  calls: readonly ShellCall[],
+): readonly ShellCall[] =>
+  visibleOf(
+    runnersOf(calls, {}).map(({ call }) => call),
+    "",
+    ROWS_MAX - CHROME - SUMMARY,
+  ).shown;
+
 /** What the pane's height depends on. */
 export interface WantedState {
   readonly view: ShellView;

@@ -5,7 +5,7 @@
 import type { EngineInterface, RenderElement, RenderInput } from "claude-code";
 import { atom, read, update } from "claude-code";
 
-import type { ShellAgents, ShellCall, ShellView } from "../types";
+import type { ShellAgents, ShellCall, ShellUsage, ShellView } from "../types";
 import { finishedIds, liveOnly, noticed, tailed } from "./model/calls.ts";
 import { configOf } from "./model/config.ts";
 import { NO_LIMITS } from "./model/limits.ts";
@@ -45,6 +45,11 @@ const viewAtom = atom(
 const limitsAtom = atom(
   { plugin: "agent-shell-watch", key: "limits" } as const,
   NO_LIMITS,
+);
+const NO_USAGE: ShellUsage = {};
+const usageAtom = atom(
+  { plugin: "agent-shell-watch", key: "usage" } as const,
+  NO_USAGE,
 );
 const nowAtom = atom({ plugin: "agent-shell-watch", key: "now" } as const, 0);
 const openAtom = atom(
@@ -198,6 +203,7 @@ export const onRender = async (
       folds: await read($, foldsAtom),
       view: await read($, viewAtom),
       limits: await read($, limitsAtom),
+      usage: await read($, usageAtom),
       now,
       selected: await read($, selectedAtom),
       columns: e.props.bodyColumns,

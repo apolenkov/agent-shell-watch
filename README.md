@@ -167,6 +167,16 @@ as ok. The files are read only while the runners view is open or a runner is
 live, at most every 30 s; the status line adds `⏳ codex limit` while a block
 is active.
 
+After `← main` a row says what the run spent (`← main · 23k tok · $0.002`). The
+numbers come from the run's own session file, found by the start time in its
+name (the call's cwd is unknown): Pi sums `message.usage` over the last 256 KiB
+of `~/.pi/agent/sessions` (tokens and dollars; `≥` when the file is larger),
+Codex shows `total_tokens` of the last `token_count` in `~/.codex/sessions`
+(cached input included, no cost). Devin keeps no usage, and a run whose file is
+not the only Pi one started in its window (parallel runners) is `—` too; with several Codex rollouts in the window the one started nearest to the call is taken. They are
+read only while the runners view is open, for the rows shown, at most every
+30 s per run; a narrow pane drops them before it cuts `by`.
+
 ### Glyphs
 
 | Glyph        | Meaning                                                                                                                                                       |

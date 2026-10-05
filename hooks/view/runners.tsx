@@ -4,15 +4,17 @@
  */
 import type { RenderElement } from "claude-code";
 
-import type { ShellCall, ShellLimits } from "../../types";
+import type { ShellCall, ShellLimits, ShellUsage } from "../../types";
 import { isLive } from "../model/calls.ts";
 import type { AgentTable } from "../model/groups.ts";
 import { fit, visibleOf } from "../model/layout.ts";
 import { blockedOf, limitsLineOf } from "../model/limits.ts";
 import { type Runner, runnersOf } from "../model/runners.ts";
+import { usageTextOf } from "../model/usage.ts";
 import {
   canStop,
   type Kit,
+  type Row,
   type RowActions,
   type RowContext,
   rowOf,
@@ -25,6 +27,8 @@ export interface RunnersView extends RowView {
   readonly agents: AgentTable;
   /** What the last read of the executors' subscription limits found. */
   readonly limits: ShellLimits;
+  /** What the last read of the runners' session files found, by call id. */
+  readonly usage: ShellUsage;
   /** The pane body's height in rows (`e.props.scroll.bodyRows`). */
   readonly rows: number;
   /** Whether the pane holds the keyboard (`e.props.isFocused`). */
@@ -108,6 +112,21 @@ const toolbarOf = (
   );
 };
 
+// A row per runner shown, each saying who started it and what it spent.
+const linesOf = (
+  runners: readonly Runner[],
+  shown: ReadonlySet<string>,
+  usage: ShellUsage,
+): readonly Row[] =>
+  runners
+    .filter(({ call }) => shown.has(call.id))
+    .map(({ call, by }, index) => ({
+      call,
+      index,
+      by,
+      usage: usageTextOf(call, usage[call.id]),
+    }));
+
 /**
  * The runners view's tree: toolbar (no fold), the summary and limits lines, one row per
  * runner as many as fit, and its own hint.
@@ -142,9 +161,9 @@ export const runnersTree = (
       {toolbarOf(kit, act)}
       {summaryLineOf(kit, runners, view.columns)}
       {limitsLineElementOf(kit, view)}
-      {runners
-        .filter(({ call }) => shown.has(call.id))
-        .map(({ call, by }, index) => rowOf(kit, context, { call, index, by }))}
+      {linesOf(runners, shown, view.usage).map((line) =>
+        rowOf(kit, context, line),
+      )}
       {layout.hidden > 0 && (
         <Text dimColor>{`+${String(layout.hidden)} older`}</Text>
       )}

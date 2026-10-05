@@ -81,6 +81,21 @@ const primaryOf = (line: string): readonly Primary[] => {
     : [];
 };
 
+const lastPrimaryOf = (tail: string): Primary | undefined =>
+  tail
+    .split("\n")
+    .flatMap((line) => primaryOf(line.trim()))
+    .at(-1);
+
+/**
+ * Whether the end of a rollout holds a `token_count` with a `primary` window
+ * (a run stopped at a spend cap writes one with `primary: null`).
+ * @param tail the end of the rollout
+ * @returns true when there is one
+ */
+export const hasPrimary = (tail: string): boolean =>
+  lastPrimaryOf(tail) !== undefined;
+
 /**
  * Codex's window from the end of a rollout: the newest `token_count` that
  * carries a `primary` (the last one may not), line by line, so a first line
@@ -91,10 +106,7 @@ const primaryOf = (line: string): readonly Primary[] => {
  * @returns the limit, empty when nothing usable was found
  */
 export const codexLimitOf = (tail: string, now: number): ExecutorLimit => {
-  const primary = tail
-    .split("\n")
-    .flatMap((line) => primaryOf(line.trim()))
-    .at(-1);
+  const primary = lastPrimaryOf(tail);
   return primary === undefined || primary.resetsAt <= now
     ? {}
     : {
@@ -155,7 +167,13 @@ export const blockedOf = (
 ): readonly LimitName[] =>
   LIMIT_NAMES.filter((name) => (limits.by[name].blockedUntil ?? 0) > now);
 
-const partsOf = (
+/**
+ * The date and time fields of a moment in a zone, by their `Intl` part names.
+ * @param at the moment, ms
+ * @param zone an IANA time zone; the host's when not given
+ * @returns the parts, as strings
+ */
+export const partsOf = (
   at: number,
   zone: string | undefined,
 ): Readonly<Record<string, string>> =>
@@ -283,17 +301,20 @@ export interface Listing {
     name: string;
     kind: string;
     mtimeMs: number;
+    size?: number;
   }>[];
 }
 
 /**
- * The newest rollout file of the listings, by `mtimeMs`.
+ * The newest rollout files of the listings, by `mtimeMs`.
+ * @param count how many to keep
  * @param listings the directories and their entries
- * @returns the path, or undefined when there is no rollout
+ * @returns the paths, newest first; empty when there is no rollout
  */
-export const newestRolloutOf = (
+export const newestRolloutsOf = (
+  count: number,
   listings: readonly Listing[],
-): string | undefined =>
+): readonly string[] =>
   listings
     .flatMap(({ directory, entries }) =>
       entries
@@ -308,4 +329,6 @@ export const newestRolloutOf = (
           at: entry.mtimeMs,
         })),
     )
-    .toSorted((first, second) => second.at - first.at)[0]?.path;
+    .toSorted((first, second) => second.at - first.at)
+    .slice(0, count)
+    .map(({ path }) => path);

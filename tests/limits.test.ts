@@ -90,6 +90,49 @@ test("the rollout's end is read with tail -c, from the newest file of today", as
   expect(seen.reads).not.toContain(ROLLOUT);
 });
 
+const OLD = `${TODAY}/rollout-2026-10-05T10-00-00-old.jsonl`;
+const codexCell = async (
+  $: Engine,
+  on: Parameters<typeof world>[0],
+  tails: Readonly<Record<string, string>>,
+): Promise<string> => {
+  const seen = withLimits(on, OPEN_RUNNERS);
+  for (const [path, tail] of Object.entries(tails)) {
+    seen.tails.set(path, tail);
+  }
+  await started($, on);
+  return textOf(await paneOf($, "terminal"));
+};
+
+test("a newest rollout with no primary keeps the block of the one before it", async ($, on) => {
+  const text = await codexCell($, on, {
+    [ROLLOUT]: TOKEN_COUNT_NO_PRIMARY,
+    [OLD]: TOKEN_COUNT_FULL,
+  });
+  expect(text).toContain(`codex 100% until ${limitTimeOf(RESETS_AT, NOW)}`);
+});
+
+test("no primary in any of the newest rollouts reads as ok", async ($, on) => {
+  const text = await codexCell($, on, {
+    [ROLLOUT]: TOKEN_COUNT_NO_PRIMARY,
+    [OLD]: TOKEN_COUNT_NO_PRIMARY,
+  });
+  expect(text).toContain("codex ok");
+});
+
+test("only the three newest rollouts are looked at", async ($, on) => {
+  const seen = withLimits(on, OPEN_RUNNERS);
+  seen.listings.set(TODAY, [
+    entry("rollout-a.jsonl", 10),
+    entry("rollout-b.jsonl", 20),
+    entry("rollout-c.jsonl", 30),
+    entry("rollout-d.jsonl", 40),
+  ]);
+  seen.tails.set(`${TODAY}/rollout-a.jsonl`, TOKEN_COUNT_FULL);
+  await started($, on);
+  expect(await textOf(await paneOf($, "terminal"))).toContain("codex ok");
+});
+
 test("an active limit adds ⏳ to the status line when a read finds it", async ($, on) => {
   const seen = withLimits(on, OPEN_RUNNERS);
   seen.tails.set(

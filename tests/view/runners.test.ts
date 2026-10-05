@@ -89,8 +89,8 @@ for (const surface of SURFACES) {
     const found = await pane.findAll({ type: "Text" });
     const texts = found.map((text) => text.text);
     expect(texts).toContain("runners · 2 · 1 live · 1 failed");
-    expect(texts).toContain("← main");
-    expect(texts).toContain("← general-purpose: Review spec");
+    expect(texts).toContain("← main · —");
+    expect(texts).toContain("← general-purpose: Review spec · —");
     expect(texts).toContain("bg · codex exec review");
     expect(texts).not.toContain("List");
     expect(texts.some((text) => text.startsWith("ls"))).toBe(false);

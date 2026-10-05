@@ -9,7 +9,7 @@ import {
   limitsLineOf,
   limitsOf,
   limitTimeOf,
-  newestRolloutOf,
+  newestRolloutsOf,
   NO_LIMITS,
   sessionDirectoriesOf,
 } from "../../hooks/model/limits.ts";
@@ -219,8 +219,8 @@ test("the rollout is looked for in today's and yesterday's directories", () => {
 const file = (name: string, mtimeMs: number) =>
   ({ name, kind: "file", mtimeMs }) as const;
 
-test("the newest rollout by mtimeMs wins across directories", () => {
-  const found = newestRolloutOf([
+test("the newest rollouts by mtimeMs come first, across directories", () => {
+  const found = newestRolloutsOf(3, [
     {
       directory: "/d/05",
       entries: [
@@ -231,9 +231,17 @@ test("the newest rollout by mtimeMs wins across directories", () => {
     },
     { directory: "/d/04", entries: [file("rollout-b.jsonl", 300)] },
   ]);
-  expect(found).toBe("/d/04/rollout-b.jsonl");
-  expect(newestRolloutOf([])).toBeUndefined();
-  expect(newestRolloutOf([{ directory: "/d", entries: [] }])).toBeUndefined();
+  expect(found).toEqual(["/d/04/rollout-b.jsonl", "/d/05/rollout-a.jsonl"]);
+  expect(newestRolloutsOf(1, [])).toEqual([]);
+  expect(newestRolloutsOf(1, [{ directory: "/d", entries: [] }])).toEqual([]);
+  expect(
+    newestRolloutsOf(1, [
+      {
+        directory: "/d/05",
+        entries: [file("rollout-a.jsonl", 1), file("rollout-c.jsonl", 2)],
+      },
+    ]),
+  ).toEqual(["/d/05/rollout-c.jsonl"]);
 });
 
 test("the limits file path", () => {
