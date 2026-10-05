@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1](https://github.com/apolenkov/agent-shell-watch/compare/v0.5.0...v0.5.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* **agent-shell-watch:** close calls the mod missed the ending of from the transcript ([#29](https://github.com/apolenkov/agent-shell-watch/issues/29)) ([8177120](https://github.com/apolenkov/agent-shell-watch/commit/8177120beb38d26b9cd60910c2289caf7d7e4ae1))
+* **ci:** approve bot runs by conclusion action_required ([#31](https://github.com/apolenkov/agent-shell-watch/issues/31)) ([06f6e7f](https://github.com/apolenkov/agent-shell-watch/commit/06f6e7fd6b26ca46bfda69a6ad6799054a4af0b8))
+
 ## [0.5.0](https://github.com/apolenkov/agent-shell-watch/compare/v0.4.0...v0.5.0) (2026-10-05)
 
 
