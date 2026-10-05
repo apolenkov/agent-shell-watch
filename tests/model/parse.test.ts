@@ -69,6 +69,11 @@ test("verdict is the last non-empty line when it is a guard line", () => {
   expect(verdictOf(["FAILED harness crashed: boom"])).toBe(
     "FAILED harness crashed: boom",
   );
+  expect(verdictOf(["WAITING approval", "", "[exited with code 78]"])).toBe(
+    "WAITING approval",
+  );
+  expect(verdictOf(["DONE 0", "[exited with code 0]"])).toBe("DONE 0");
+  expect(verdictOf(["out", "[exited with code 1]"])).toBeUndefined();
   expect(verdictOf(["WAITING"])).toBeUndefined();
   expect(verdictOf(["FAILED   "])).toBeUndefined();
   expect(verdictOf(["DONE 0", "more"])).toBeUndefined();

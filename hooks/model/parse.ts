@@ -114,14 +114,20 @@ export const promptWordsOf = (command: string): string | undefined => {
   return words.length === 0 ? undefined : head;
 };
 
+// Claude Code 2.1.289 ends a background task's output file with this line.
+const EXIT_NOTE = /^\[exited with code -?\d+\]$/u;
+
 /**
- * The runner guard's verdict: the last non-empty line when it is one.
+ * The runner guard's verdict: the last non-empty line when it is one, not
+ * counting the `[exited with code n]` line a background task's file ends with.
  * @param lines output lines, oldest first
  * @returns `DONE n`, `RATE_LIMIT epoch`, `STALLED reason`, `BUSY pid file`,
  * `WAITING what`, `FAILED why`
  */
 export const verdictOf = (lines: readonly string[]): string | undefined => {
-  const last = lines.findLast((line) => line.trim() !== "")?.trim();
+  const last = lines
+    .findLast((line) => line.trim() !== "" && !EXIT_NOTE.test(line.trim()))
+    ?.trim();
   return last !== undefined && VERDICT.test(last) ? last : undefined;
 };
 
