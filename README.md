@@ -154,9 +154,7 @@ The first line's `[ 1 ▾ ]` holds the focus.
 `/shell-watch runners` (or `r`) drops the groups and lists only the calls of
 Pi, Devin, Codex and `ocr`, most urgent first: a summary line
 (`runners · N · k live · f failed`), then one row per run with its verdict
-(`DONE 0`, `RATE_LIMIT …`, `WAITING …`, `FAILED …`, from the runner guard) and,
-on its second line, who started it (`by main`, `by general-purpose: review
-spec`). Rows expand and stop as in the agents view. The view is remembered
+(`DONE 0`, `RATE_LIMIT …`, `WAITING …`, `FAILED …`, from the runner guard) and, after its label, who started it (`← main`, `← general-purpose: review spec`). Rows expand and stop as in the agents view. The view is remembered
 between sessions.
 
 ### Glyphs
