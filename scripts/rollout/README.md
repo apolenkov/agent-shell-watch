@@ -35,7 +35,7 @@ agent-autopilot has another session at work (release 0.2.0): tell the coordinato
 1. `scripts/rollout-all.sh` (dry run): preflight and render and `actionlint` for every target, then
    the gate. Fix every `PROBLEM` first.
 2. Gate: agent-shell-watch, agent-compact-advisor and agent-council together show at least 3 clean
-   Dependabot PRs and 0 incidents (`scripts/autofix-report.sh <owner/repo> 14`). Closed gate, no `--apply`.
+   Dependabot PRs, 0 incidents and 0 suspects (`scripts/autofix-report.sh <owner/repo> 14`). Closed gate, no `--apply`.
 3. `scripts/rollout-all.sh --apply`: per target apply, wait for the PR to merge (it updates the branch
    when BEHIND), check `ci-autofix.yml` is on main, clean up, next. The first problem stops it with
    `STOP: ...`; re-run after fixing, finished targets are skipped.

@@ -70,9 +70,12 @@ The autofix bot never changes workflows, hooks, lint config or the scripts in `p
 The full list of what the automation may and may not do, how to stop it and what is not yet
 verified: [docs/adr/0001-night-factory-autonomy.md](docs/adr/0001-night-factory-autonomy.md).
 
-`scripts/autofix-report.sh [owner/repo] [days]` reports what Dependabot PRs and the bot did
-over the last days (clean merges, fix commits, `needs-human`, incidents) and says whether
-the observation criterion (3 clean Dependabot PRs, 0 incidents) is met.
+`scripts/autofix-report.sh [owner/repo] [days]` reports what the bot did over the last days on
+Dependabot PRs, `night-fix` PRs and your `autofix` PRs (clean merges, fix commits, `needs-human`),
+lists incidents (protected path, size, commit outside a PR, bot branch without a PR, secret-like
+text in bot comments) and suspects (commits that weaken tests), and says whether the observation
+criterion (3 clean Dependabot PRs, 0 incidents, 0 suspects) is met. `--selftest` runs the detectors
+on fixtures.
 
 ## Night fix
 

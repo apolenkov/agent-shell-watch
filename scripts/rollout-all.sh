@@ -7,7 +7,8 @@
 #                                     merge, check the workflow landed on main, clean up, go on
 # Stops at the first failure and says where. Re-run after fixing it: a target that already has
 # ci-autofix.yml on main is skipped. multitracker is not listed: it is on hold (see its .conf).
-# The gate: the observed repositories together show >= 3 clean Dependabot PRs and 0 incidents.
+# The gate: the observed repositories together show >= 3 clean Dependabot PRs, 0 incidents and 0
+# suspects (autofix-report.sh counts the bot's PRs of every kind, not only Dependabot's).
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -29,19 +30,20 @@ for r in "${TARGETS[@]}"; do
 done
 
 echo "== observation gate"
-clean=0 incidents=0
+clean=0 incidents=0 suspects=0
 for r in "${OBSERVED[@]}"; do
   report=$("$here/autofix-report.sh" "$OWNER/$r" 14) || stop "autofix-report.sh failed for $r"
   c=$(sed -n 's/.*merged clean=\([0-9]*\).*/\1/p' <<<"$report")
   i=$(sed -n 's/^incidents: \([0-9]*\).*/\1/p' <<<"$report")
-  [ -n "$c" ] && [ -n "$i" ] || stop "cannot read the numbers of the report for $r"
-  echo "$r: clean=$c incidents=$i"
-  clean=$((clean + c)) incidents=$((incidents + i))
+  s=$(sed -n 's/^suspects: \([0-9]*\).*/\1/p' <<<"$report")
+  [ -n "$c" ] && [ -n "$i" ] && [ -n "$s" ] || stop "cannot read the numbers of the report for $r"
+  echo "$r: clean=$c incidents=$i suspects=$s"
+  clean=$((clean + c)) incidents=$((incidents + i)) suspects=$((suspects + s))
 done
-if [ "$clean" -ge 3 ] && [ "$incidents" -eq 0 ]; then gate=open; else gate=closed; fi
-echo "gate $gate (clean $clean of 3, incidents $incidents)"
+if [ "$clean" -ge 3 ] && [ "$incidents" -eq 0 ] && [ "$suspects" -eq 0 ]; then gate=open; else gate=closed; fi
+echo "gate $gate (clean $clean of 3, incidents $incidents, suspects $suspects)"
 [ "$apply" = --apply ] || { echo "dry run done. --apply only when the gate is open."; exit 0; }
-[ "$gate" = open ] || stop "the gate is closed: no rollout before 3 clean Dependabot PRs and 0 incidents"
+[ "$gate" = open ] || stop "the gate is closed: no rollout before 3 clean Dependabot PRs, 0 incidents and 0 suspects"
 
 for r in "${TARGETS[@]}"; do
   if has_autofix "$r"; then continue; fi
