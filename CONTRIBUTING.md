@@ -35,10 +35,14 @@ unit tests cannot: that the hooks module loads in the engine and registers its
 command (`/shell-watch clear` answers), and that a plain Bash turn goes through
 untouched with the mod on. It costs about $0.07 and half a minute.
 
-It is a **manual step, not CI**: the run needs your Claude login or an API key
-in the environment, and the repository keeps no such secret. It cannot see the
-status line, the pane or a background runner's verdict (a headless session
-draws none); those are checked by hand in an interactive session.
+Locally it needs your Claude login or an API key. In CI the `eval` job runs it
+when the repository has the secret `ANTHROPIC_API_KEY`; without the secret
+(a fork, a Dependabot run, no key yet) the job skips its steps and stays green,
+so until someone adds the key this is a local step, not an automatic check.
+
+It cannot see the status line, the pane or a background runner's verdict (a
+headless session draws none); those are checked by hand in an interactive
+session.
 
 ## Dependency holds
 
