@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # ci-autofix re-runs this by hand: a push with GITHUB_TOKEN starts no pull_request run.
+  workflow_dispatch:
   schedule:
     - cron: "17 4 * * 1"
 permissions:

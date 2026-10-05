@@ -32,3 +32,12 @@ caches type immutability per type, not per rule level, so linting `hooks/` (lite
 - `typescript` stays on 6.x (6.0.3): `typescript-eslint` 8.71.0, its latest,
   declares the peer `typescript >=4.8.4 <6.1.0`. Take TypeScript 7 once it widens
   that range; drop the Dependabot `ignore` for `typescript` then.
+
+## CI autofix
+
+When `ci` fails on a Dependabot PR (or on your own PR labelled `autofix`),
+`.github/workflows/ci-autofix.yml` asks an OpenCode Go agent for a patch from the
+failure log. Two attempts per PR (commits carrying an `Autofix-Attempt:` trailer),
+then the PR gets `needs-human` and auto-merge is switched off. The agent has no
+shell and cannot change `.github/`, hooks, check configuration or secrets; a patch
+that does is thrown away. Remove `needs-human` to hand the PR back to the bot.
