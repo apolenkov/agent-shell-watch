@@ -59,8 +59,18 @@ const RUNNER = [
 ];
 
 const AGENTS = [
-  { id: "a1", description: "List mods", type: "pi-runner", status: "running" },
-  { id: "a2", description: "Old", type: "Explore", status: "completed" },
+  {
+    id: "a1",
+    description: "List mods",
+    type: "pi-runner",
+    status: "running" as const,
+  },
+  {
+    id: "a2",
+    description: "Old",
+    type: "Explore",
+    status: "completed" as const,
+  },
 ];
 
 test("calls made before the mod loaded are rebuilt once, reload or not", async ($, on) => {
