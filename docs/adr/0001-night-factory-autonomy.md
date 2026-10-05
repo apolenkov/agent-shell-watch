@@ -129,9 +129,11 @@ Residual risk, accepted for now:
 
 ## Cost and token budget
 
-Public repositories get Actions minutes free and unlimited, so the factory costs nothing there, and
-GitHub Pro or Team does not change that (checked by the coordinator, 2026-10-06). The only spend is
-OpenCode Go tokens. Claude Code Action is **deliberately not used**: the owner decided on 2026-10-05
+Public repositories get Actions minutes free and unlimited, so the factory costs nothing there. The
+only spend is OpenCode Go tokens. GitHub Pro (40 concurrent jobs instead of 20 on the free plan; Team 60) would raise the concurrency limit, not the minutes; the busiest evening measured so far peaked at
+12 running jobs, so the limit is not what the factory runs into and Pro is not needed now (see
+"Measured so far"; limits: docs.github.com/en/actions/reference/limits, 2026-10-06). It becomes a
+sensible purchase if, after trimming, ordinary work keeps reaching 20. Claude Code Action is **deliberately not used**: the owner decided on 2026-10-05
 not to spend his Claude subscription on the factory; this is a decision, not a gap. A second key is
 planned in environment `ci`: `ANTHROPIC_API_KEY` for live runs of the mods (`claude plugin eval`,
 TASK-310, about 7 cents per set). When it lands, "the only secret is `OCR_LLM_AUTH_TOKEN`" above stops
@@ -210,9 +212,18 @@ schedule; it is run by hand after each Dependabot PR and before every rollout st
   2026-10-05 all 6 failed `night-review` runs in agent-compact-advisor (4) and agent-council (2) were
   GitHub's hosted runner never being assigned: the job is cancelled after 15 to 17 minutes with no
   step and the annotation "The job was not acquired by Runner of type hosted even after multiple
-  attempts" (the same for 8 of 8 failures in council and 11 of 14 in advisor over the last 100
-  runs; none in the pilot). The review of that PR then does not happen, silently, and nothing
-  retries it. A re-run by hand (`gh run rerun`) or a dispatch with `pr` repeats it.
+  attempts". The review of that PR then does not happen, silently, and nothing retries it. A re-run
+  by hand (`gh run rerun`) or a dispatch with `pr` repeats it.
+- That was a GitHub incident, not our load. Over all 15 repositories of the account between 17:30
+  and 00:30 UTC (2 077 jobs) 85 jobs were cancelled without a runner after waiting more than five
+  minutes (agent-shell-watch 55, advisor 16, council 8, autopilot 2, runner-guard 2, jev 2), all
+  created between 19:14 and 21:27 UTC, none outside that window. GitHub's status page lists "Incident
+  with Actions" from 19:11 to 22:49 UTC: delays assigning GitHub-hosted runners. It was not the
+  concurrent-job limit: the free plan allows 20 (Pro 40, Team 60; docs.github.com/en/actions/reference/limits),
+  the account's highest number of running jobs was 12 (at 17:39, before the incident), and while
+  the cancelled jobs waited it was at most 8, mostly 1 to 3 (waiting jobs up to 17). The share per
+  repository (advisor and council "all" failures, the pilot "none") only reflects which jobs were
+  queued in the window. Retrying a job that never started would not have helped inside that window.
 - A second silent loss was a real defect: before the pilot's PR #50 the `night-review` gate looked
   only for an open PR, and with auto-merge the PR is often already merged when the review starts,
   so the run ended with "no open PR" and nothing reviewed. The gate now looks at every PR state and
@@ -246,4 +257,8 @@ schedule; it is run by hand after each Dependabot PR and before every rollout st
   GitHub never started (`night-review` and `ci-autofix` do not).
 - Protect `tests/` in `ci-autofix` as `night-fix` does, or detect weakened assertions.
 - Run `autofix-report.sh` on a schedule and open an issue on the first incident.
+- Let `autofix-report.sh` read every PR of the factory (night-fix, owner PRs with `autofix`), not only
+  Dependabot's; make the stop procedure cover `dependabot-automerge.yml` (TASK-282.07, TASK-282.08).
+- Retry of a job GitHub never started: not added; the one measured case was a GitHub incident, where a
+  retry cannot help. Revisit if such losses appear outside an incident.
 - One shared copy of `PROTECTED` and of the opencode pin instead of one per workflow and repository.
