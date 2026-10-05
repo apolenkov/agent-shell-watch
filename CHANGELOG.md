@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/apolenkov/agent-shell-watch/compare/v0.3.1...v0.4.0) (2026-10-05)
+
+
+### Features
+
+* **agent-shell-watch:** group the pane's calls by the agent that made them ([b38fc36](https://github.com/apolenkov/agent-shell-watch/commit/b38fc36551b296df4c6f3fd40c7593e97b7f07f4))
+
+
+### Bug Fixes
+
+* **agent-shell-watch:** folding asks the inline pane for the rows it now needs ([090dfd5](https://github.com/apolenkov/agent-shell-watch/commit/090dfd58a98d82d32afb275ea301f64f1cd974c9))
+
 ## [0.3.1](https://github.com/apolenkov/agent-shell-watch/compare/v0.3.0...v0.3.1) (2026-10-04)
 
 
