@@ -31,11 +31,11 @@ on:
 
 permissions: {}
 
-# One run at a time, but the runs that follow a pull request's night-review (they
-# all end skipped at the gate) must not take the slot: a queued scan run would
-# be replaced by the next pending one and cancelled.
+# One real run at a time (dispatch, schedule), but the runs that follow other
+# night-review events (they all end skipped at the gate) must not take the slot:
+# a queued run would be replaced by the next pending one and cancelled.
 concurrency:
-  group: night-fix-${{ github.event.workflow_run.event == 'pull_request' && 'pr' || 'scan' }}
+  group: night-fix-${{ github.event_name == 'workflow_dispatch' && 'dispatch' || github.event.workflow_run.event == 'schedule' && 'scan' || 'other' }}
   cancel-in-progress: false
 
 env:
