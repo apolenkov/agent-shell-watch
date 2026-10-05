@@ -31,8 +31,11 @@ on:
 
 permissions: {}
 
+# One run at a time, but the runs that follow a pull request's night-review (they
+# all end skipped at the gate) must not take the slot: a queued scan run would
+# be replaced by the next pending one and cancelled.
 concurrency:
-  group: night-fix
+  group: night-fix-${{ github.event.workflow_run.event == 'pull_request' && 'pr' || 'scan' }}
   cancel-in-progress: false
 
 env:
