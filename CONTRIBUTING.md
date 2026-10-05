@@ -67,6 +67,8 @@ count stays with the PR, so the bot will not try a third time.
 Labels: `autofix` opts one of your own PRs in; the bot sets `needs-human` when it stops.
 
 The autofix bot never changes workflows, hooks, lint config or the scripts in `package.json`.
+`scripts/factory-stop.sh <repo>` stops all of the automation at once (the autofix, review and night-fix
+workflows, Dependabot's auto-merge and armed auto-merge on open factory PRs); `--resume` undoes it.
 The full list of what the automation may and may not do, how to stop it and what is not yet
 verified: [docs/adr/0001-night-factory-autonomy.md](docs/adr/0001-night-factory-autonomy.md).
 
