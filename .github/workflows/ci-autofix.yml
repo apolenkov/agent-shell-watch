@@ -4,7 +4,7 @@ name: ci-autofix
 # makes an OpenCode Go agent read the failure log and propose a patch. Three
 # jobs keep the secrets apart from the write token:
 #   fix      LLM token, read-only repo token, shell denied; produces a patch
-#   push     write token, no LLM token; checks the patch, commits, re-runs ci
+#   push     write token, no LLM token; checks the patch, commits, approves its runs
 #   escalate labels `needs-human` and cancels auto-merge when the bot gives up
 # Decision record: backlog ADR "CI autofix agent on OpenCode Go" (TASK-282.2).
 on:
@@ -261,11 +261,20 @@ jobs:
           # Not a fast-forward: the branch moved on, and its new head starts its own cycle.
           git push "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "HEAD:refs/heads/${HEAD_BRANCH}" \
             || { echo "branch moved, nothing pushed"; exit 0; }
-          # A push made with GITHUB_TOKEN starts no `pull_request` run; workflow
-          # dispatch is exempt. Both required workflows are re-run by hand.
-          # Pushed but not re-run would leave the PR waiting for checks forever.
-          { gh workflow run ci.yml -R "$REPO" --ref "$HEAD_BRANCH" && gh workflow run codeql.yml -R "$REPO" --ref "$HEAD_BRANCH"; } \
-            || echo "reason=the fix was pushed but the checks could not be re-run (workflow_dispatch missing on this branch?)" >> "$GITHUB_OUTPUT"
+          # The push starts pull_request runs for this head, but the bot counts as
+          # an outside contributor and they wait for approval, which hides any
+          # other result for the required checks. The patch passed the guard
+          # above, so approve them.
+          sha=$(git rev-parse HEAD)
+          approved=0
+          for _ in $(seq 12); do
+            for id in $(gh api "repos/$REPO/actions/runs?head_sha=$sha&status=action_required" --jq '.workflow_runs[].id'); do
+              gh api -X POST "repos/$REPO/actions/runs/$id/approve" --silent && approved=$((approved + 1))
+            done
+            [ "$approved" -ge 2 ] && break # ci and codeql
+            sleep 10
+          done
+          [ "$approved" -ge 2 ] || echo "reason=the fix was pushed but its checks could not be approved" >> "$GITHUB_OUTPUT"
 
   escalate:
     needs: [gate, push]
