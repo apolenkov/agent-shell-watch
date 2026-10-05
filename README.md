@@ -1,14 +1,19 @@
-# agent-shell-watch
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.svg">
+  <img alt="agent-shell-watch: see at a glance that your shells and delegated agents are moving" src=".github/assets/banner-light.svg" width="100%">
+</picture>
 
 [![ci](https://github.com/apolenkov/agent-shell-watch/actions/workflows/ci.yml/badge.svg)](https://github.com/apolenkov/agent-shell-watch/actions/workflows/ci.yml)
 [![codeql](https://github.com/apolenkov/agent-shell-watch/actions/workflows/codeql.yml/badge.svg)](https://github.com/apolenkov/agent-shell-watch/actions/workflows/codeql.yml)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/apolenkov/agent-shell-watch/badge)](https://scorecard.dev/viewer/?uri=github.com/apolenkov/agent-shell-watch)
+[![release](https://img.shields.io/github/v/release/apolenkov/agent-shell-watch?sort=semver)](https://github.com/apolenkov/agent-shell-watch/releases)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Claude Code ≥ 2.1.287](https://img.shields.io/badge/Claude%20Code-%E2%89%A5%202.1.287-0A7468)](https://claude.com/claude-code)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/apolenkov/agent-shell-watch/badge)](https://scorecard.dev/viewer/?uri=github.com/apolenkov/agent-shell-watch)
 
-See at a glance that the work is moving: time ticking, output fresh, nothing
-failed. agent-shell-watch watches this session's Bash calls (main loop and every
-subagent), background tasks, and above all the external agent runs delegated
-through the shell: Codex, Pi, Devin and OpenCodeReview (`ocr`).
+A [Claude Code](https://claude.com/claude-code) mod that watches this
+session's Bash calls (main loop and every subagent), background tasks and,
+above all, the agent runs you delegate through the shell: Codex, Pi, Devin and
+OpenCodeReview (`ocr`).
 
 ![agent-shell-watch: a background Codex review ticking with its current file, a failed typecheck, the status line](demo/demo.gif)
 
@@ -16,83 +21,31 @@ through the shell: Codex, Pi, Devin and OpenCodeReview (`ocr`).
 [`demo/demo.tape`](demo/demo.tape); `codex` and `tsc` are stand-ins from
 `demo/bin` so the recording is free and repeatable.</sub>
 
-## What it shows
+## Why
 
-An always-on status line while anything runs, or a call failed in the last
-2 minutes. The most urgent call leads (hung, failed, quiet, running; a runner
-before a plain shell), the rest are counted as `+N hung`, `+N failed`,
-`+N quiet`, `+N bg`, `+N running`. The leading call says whose it is: `main`
-or the subagent's type. Claude Code labels the line with the plugin's name:
+- A delegated agent run in a background shell is a black box: you cannot tell
+  a long review from a hung one without opening its log.
+- Failures in background calls scroll past unnoticed until the model trips
+  over them.
+- A delegated agent that hit its rate limit or stalled says so only in a log
+  you have to go and read.
 
-```
-agent-shell-watch: ◐ main · codex · Review diff 2:13 · output 4s ago · › applying patch src/a.ts · +1 bg
-agent-shell-watch: ⚠ quiet 6m pi-runner · pi · Fix flaky test 7:40 · +2 running
-agent-shell-watch: ◐ main · Wait 0:45 · no output · 45s
-agent-shell-watch: ⚠ hung 12m main · Wait loop · +1 failed
-agent-shell-watch: ✗ main · Typecheck exit 2 · +1 bg
-agent-shell-watch: ✗ general-purpose · devin · Review spec RATE_LIMIT 1790000000
-```
+agent-shell-watch shows at a glance that the work is moving: time ticking,
+output fresh, nothing failed.
 
-`/shell-watch` opens the pane, grouped by who made the calls: `main` (this
-session's own loop) and each subagent (`type: description`; one started by
-another subagent ends `↳ <its parent>`). A runner is a row in the group of the
-agent that ran it. Each group's header carries its rollup: the worst live
-call (hung, quiet, running), a failure in the last 2 minutes, the agent's own
-status (`✗` when it failed), or a dim `◌ idle` for an agent at rest. The most
-urgent group comes first; finished groups start folded, a folded header
-shows its leading call's last line. Inside a group, live calls come first,
-then failures, finished calls and denied ones, the newest first in each;
-what does not fit the pane's height becomes a dim `+N older` line. Opened
-above the prompt, the pane asks for the rows it needs (6 to 30); short of
-room, rows shrink to one line, but a running runner keeps its last output
-line. A row is its state before the label (a narrow pane cuts the label,
-never the time or outcome), its command (`bg ·` for a background one), and
-its last output line (a failure's last error in red, a denial's reason, dim).
+## Features
 
-```
-[ f fold ] [ c clear ] [ q close ]
-[ 1 ▾ ] ⚠ main · 3 calls · 1 live
-[ 2 ▸ ] ⚠ 9:12 hung · no output · 9m  Wait loop  [ s stop ]
-        bg · sleep 3600
-[ 3 ▸ ] ● 0:01 exit 0  List files
-        ls -1 | head -3
-        › README.md
-[ 4 ▾ ] ✗ general-purpose: Review spec · 2 calls
-[ 5 ▸ ] ✗ 0:03 RATE_LIMIT 1790000000  devin · Review spec
-        devin -p 'review the spec' 2>&1 | tee /tmp/d.log
-        ✗ RATE_LIMIT 1790000000
-[ 6 ▸ ] ● Explore: Find callers · 4 calls · › 12 matches
-1–9 open · f fold · c clear · q close · Esc → prompt
-```
-
-`/shell-watch` gives the pane the keyboard (again, if it already is open:
-it refocuses); Esc hands the keys back to the prompt and the pane stays. The
-first line's `[ 1 ▾ ]` holds the focus. Each button shows its key: `1`–`9`
-on a header fold or open its group, on a row expand or collapse it (the full
-command, last 40 lines, stderr, output and watch files); `f` folds every
-group, or opens them all when all are folded; `c` clears finished calls, `s`
-stops the running background call (when there is one), `q` closes. Tab
-walks the buttons, Enter presses. The pane remembers across sessions whether
-you left it open.
-
-Glyphs: `◐` running, `●` done, `✗` failed, `⚠` quiet or hung, `○` stopped,
-dim `○ denied` for a call refused before it ran (a permission rule, a hook,
-you), and dim `○ no match` when a search or test (`grep`, `rg`, `ag`, `ack`,
-`git grep`, `diff`, `test`/`[`, `cmp`, `pgrep`) ends a command with exit 1;
-neither reaches the status line. A call rebuilt from the transcript without
-a duration shows `—` for its time.
-A runner's outcome is its guard verdict (`DONE n`, `RATE_LIMIT epoch`,
-`STALLED reason`, `BUSY pid file`), else the exit code. `[ stop ]` on a
-running background row stops it with `TaskStop`.
-
-## Renamed from shell-flow
-
-Up to 0.2.x this mod was **shell-flow** (`/shell-flow`, installed as
-`shell-flow@claude-shell-flow` or `shell-flow@claude-mods`). It is now
-**agent-shell-watch** and its command is **`/shell-watch`** (`clear` and `stop`
-as before). The plugin's name changed, so an old install does not update
-itself: uninstall `shell-flow` and install `agent-shell-watch` as below. Its
-remembered pane state starts afresh.
+- 📟 **Status line** while anything runs, or a call failed in the last
+  2 minutes: the most urgent call leads, the rest are counted.
+- 🪟 **`/shell-watch` pane**, grouped by who made the calls (`main` and each
+  subagent), with every call's state, command and last output line.
+- 🏃 **Runners recognised**: `codex`, `pi`, `devin`, `ocr`, with their live
+  output file and their guard verdict (`DONE`, `RATE_LIMIT`, `STALLED`, `BUSY`).
+- ⚠️ **Quiet and hung**: a running call without new output for `quietMin` /
+  `hangMin` minutes is flagged.
+- ⏹️ **Stop button** for the running background call, through `TaskStop`.
+- ⌨️ **Keyboard first**: every button shows its key; the pane remembers
+  across sessions whether you left it open.
 
 ## Install
 
@@ -114,7 +67,104 @@ It is also listed, with its sibling mods, in the
 Requirements: Claude Code 2.1.287 or later (mods are on by default), and
 `tail` on `PATH`.
 
-## Options
+> [!NOTE]
+> **Renamed from shell-flow.** Up to 0.2.x this mod was **shell-flow**
+> (`/shell-flow`, installed as `shell-flow@claude-shell-flow` or
+> `shell-flow@claude-mods`). It is now **agent-shell-watch** and its command
+> is **`/shell-watch`** (`clear` and `stop` as before). The plugin's name
+> changed, so an old install does not update itself: uninstall `shell-flow`
+> and install `agent-shell-watch` as above. Its remembered pane state starts
+> afresh.
+
+## Usage
+
+### Status line
+
+Shown while anything runs, or a call failed in the last 2 minutes. The most
+urgent call leads (hung, failed, quiet, running; a runner before a plain
+shell), the rest are counted as `+N hung`, `+N failed`, `+N quiet`, `+N bg`,
+`+N running`. The leading call says whose it is: `main` or the subagent's
+type. Claude Code labels the line with the plugin's name:
+
+```
+agent-shell-watch: ◐ main · codex · Review diff 2:13 · output 4s ago · › applying patch src/a.ts · +1 bg
+agent-shell-watch: ⚠ quiet 6m pi-runner · pi · Fix flaky test 7:40 · +2 running
+agent-shell-watch: ◐ main · Wait 0:45 · no output · 45s
+agent-shell-watch: ⚠ hung 12m main · Wait loop · +1 failed
+agent-shell-watch: ✗ main · Typecheck exit 2 · +1 bg
+agent-shell-watch: ✗ general-purpose · devin · Review spec RATE_LIMIT 1790000000
+```
+
+### The pane
+
+```
+[ f fold ] [ c clear ] [ q close ]
+[ 1 ▾ ] ⚠ main · 3 calls · 1 live
+[ 2 ▸ ] ⚠ 9:12 hung · no output · 9m  Wait loop  [ s stop ]
+        bg · sleep 3600
+[ 3 ▸ ] ● 0:01 exit 0  List files
+        ls -1 | head -3
+        › README.md
+[ 4 ▾ ] ✗ general-purpose: Review spec · 2 calls
+[ 5 ▸ ] ✗ 0:03 RATE_LIMIT 1790000000  devin · Review spec
+        devin -p 'review the spec' 2>&1 | tee /tmp/d.log
+        ✗ RATE_LIMIT 1790000000
+[ 6 ▸ ] ● Explore: Find callers · 4 calls · › 12 matches
+1–9 open · f fold · c clear · q close · Esc → prompt
+```
+
+Calls are grouped by who made them: `main` (this session's own loop) and
+each subagent (`type: description`; one started by another subagent ends
+`↳ <its parent>`). A runner is a row in the group of the agent that ran it.
+Each group's header carries its rollup: the worst live call (hung, quiet,
+running), a failure in the last 2 minutes, the agent's own status (`✗` when
+it failed), or a dim `◌ idle` for an agent at rest. The most urgent group
+comes first; finished groups start folded, and a folded header shows its
+leading call's last line.
+
+Inside a group, live calls come first, then failures, finished calls and
+denied ones, the newest first in each; what does not fit the pane's height
+becomes a dim `+N older` line. Opened above the prompt, the pane asks for the
+rows it needs (6 to 30); short of room, rows shrink to one line, but a
+running runner keeps its last output line. A row is its state before the
+label (a narrow pane cuts the label, never the time or outcome), its command
+(`bg ·` for a background one), and its last output line (a failure's last
+error in red, a denial's reason, dim).
+
+| Command / key        | What it does                                                                                                         |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `/shell-watch`       | Opens the pane and gives it the keyboard (refocuses it if already open)                                              |
+| `/shell-watch clear` | Forgets finished calls                                                                                               |
+| `/shell-watch stop`  | Closes the pane                                                                                                      |
+| `1`–`9`              | Folds or opens a group (on its header) or expands a row: full command, last 40 lines, stderr, output and watch files |
+| `f`                  | Folds every group, or opens them all when all are folded                                                             |
+| `c`                  | Clears finished calls                                                                                                |
+| `s`                  | Stops the running background call (when there is one) with `TaskStop`                                                |
+| `q`                  | Closes the pane                                                                                                      |
+| Tab / Enter          | Walks the buttons / presses one                                                                                      |
+| Esc                  | Hands the keys back to the prompt; the pane stays                                                                    |
+
+The first line's `[ 1 ▾ ]` holds the focus.
+
+### Glyphs
+
+| Glyph        | Meaning                                                                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `◐`          | running                                                                                                                                                       |
+| `●`          | done                                                                                                                                                          |
+| `✗`          | failed                                                                                                                                                        |
+| `⚠`          | quiet or hung                                                                                                                                                 |
+| `○`          | stopped                                                                                                                                                       |
+| `○ denied`   | (dim) refused before it ran (a permission rule, a hook, you); never reaches the status line                                                                   |
+| `○ no match` | (dim) a search or test (`grep`, `rg`, `ag`, `ack`, `git grep`, `diff`, `test`/`[`, `cmp`, `pgrep`) ended a command with exit 1; never reaches the status line |
+| `—`          | the time of a call rebuilt from the transcript without a duration                                                                                             |
+
+A runner's outcome is its guard verdict (`DONE n`, `RATE_LIMIT epoch`,
+`STALLED reason`, `BUSY pid file`), else the exit code.
+
+## Configuration
+
+Set in `/config`.
 
 | Option        | Default | Meaning                                                   |
 | ------------- | ------- | --------------------------------------------------------- |
@@ -125,9 +175,8 @@ Requirements: Claude Code 2.1.287 or later (mods are on by default), and
 | `hangMin`     | 10      | Minutes without new output before a running call is hung  |
 | `statusLine`  | true    | Show the status line                                      |
 
-`/shell-watch clear` forgets finished calls; `/shell-watch stop` closes the pane.
-
-## How it works
+<details>
+<summary><b>How it works</b></summary>
 
 | Event / timer             | What agent-shell-watch does                                                                   |
 | ------------------------- | --------------------------------------------------------------------------------------------- |
@@ -144,24 +193,31 @@ A runner is a command whose executable (past `NAME=value` and `cd … &&`,
 after a guard's `--`, or inside `bash -c '…'` / `sh -c "…"`) is `codex`,
 `pi`, `devin` or `ocr`. Its live output is the guard's `--watch-file`, its
 `| tee [-a] /path`, or its absolute stdout redirect (`> /path/run.log`); with
-no description its label is the first words of its prompt. The verdict is read
-from the Bash output once the run ends. agent-shell-watch sees the command as the
-model wrote it, before a `PreToolUse` settings hook wraps it, and recognises
-both forms. A `TaskStop` (the model's or the pane's) settles its call as
-stopped; an interrupted call is stopped, not failed. Every hook passes its
-event on unchanged.
+no description its label is the first words of its prompt. The verdict is
+read from the Bash output once the run ends. agent-shell-watch sees the
+command as the model wrote it, before a `PreToolUse` settings hook wraps it,
+and recognises both forms. A `TaskStop` (the model's or the pane's) settles
+its call as stopped; an interrupted call is stopped, not failed. Every hook
+passes its event on unchanged.
+
+</details>
 
 ## Privacy
 
 No network, no telemetry. It reads only this session's transcript and the
 output and watch files of its own Bash calls, keeps its list in the session's
 memory, and stores one value across sessions: whether the pane was left open.
+See [SECURITY.md](SECURITY.md).
 
 ## Development
 
 See [CONTRIBUTING.md](CONTRIBUTING.md): `npm ci`, then `npm run check`; try it
 live with `claude --plugin-dir .`. Releases are cut by release-please; the
 history before 0.2.0 comes from
-[agent-watch](https://github.com/apolenkov/agent-watch).
+[agent-watch](https://github.com/apolenkov/agent-watch). Questions:
+[SUPPORT.md](SUPPORT.md).
 
-`engine-types/claude-code.d.ts` is © Anthropic PBC and not covered by the MIT license; see [engine-types/NOTICE.md](engine-types/NOTICE.md).
+## License
+
+[MIT](LICENSE). `engine-types/claude-code.d.ts` is © Anthropic PBC and not
+covered by the MIT license; see [engine-types/NOTICE.md](engine-types/NOTICE.md).
