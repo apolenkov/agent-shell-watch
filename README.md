@@ -15,7 +15,7 @@ session's Bash calls (main loop and every subagent), background tasks and,
 above all, the agent runs you delegate through the shell: Codex, Pi, Devin and
 OpenCodeReview (`ocr`).
 
-![agent-shell-watch: a background Codex review ticking with its current file, a failed typecheck, the status line](demo/demo.gif)
+![agent-shell-watch: a background Codex review ticking with its current file, a failed typecheck, the status line, the runners view](demo/demo.gif)
 
 <sub>Recorded with [vhs](https://github.com/charmbracelet/vhs) from
 [`demo/demo.tape`](demo/demo.tape); `codex` and `tsc` are stand-ins from
@@ -131,20 +131,33 @@ label (a narrow pane cuts the label, never the time or outcome), its command
 (`bg ·` for a background one), and its last output line (a failure's last
 error in red, a denial's reason, dim).
 
-| Command / key        | What it does                                                                                                         |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `/shell-watch`       | Opens the pane and gives it the keyboard (refocuses it if already open)                                              |
-| `/shell-watch clear` | Forgets finished calls                                                                                               |
-| `/shell-watch stop`  | Closes the pane                                                                                                      |
-| `1`–`9`              | Folds or opens a group (on its header) or expands a row: full command, last 40 lines, stderr, output and watch files |
-| `f`                  | Folds every group, or opens them all when all are folded                                                             |
-| `c`                  | Clears finished calls                                                                                                |
-| `s`                  | Stops the running background call (when there is one) with `TaskStop`                                                |
-| `q`                  | Closes the pane                                                                                                      |
-| Tab / Enter          | Walks the buttons / presses one                                                                                      |
-| Esc                  | Hands the keys back to the prompt; the pane stays                                                                    |
+| Command / key          | What it does                                                                                                         |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `/shell-watch`         | Opens the pane and gives it the keyboard (refocuses it if already open)                                              |
+| `/shell-watch runners` | Shows only the external agent CLIs (Pi, Devin, Codex), flat: the verdict and who started each one                    |
+| `/shell-watch agents`  | Back to the calls grouped by agent (`groups` works too); a bare `/shell-watch` keeps the view you left               |
+| `/shell-watch clear`   | Forgets finished calls                                                                                               |
+| `/shell-watch stop`    | Closes the pane                                                                                                      |
+| `1`–`9`                | Folds or opens a group (on its header) or expands a row: full command, last 40 lines, stderr, output and watch files |
+| `f`                    | Folds every group, or opens them all when all are folded                                                             |
+| `r`                    | Flips between the agents view and the runners view                                                                   |
+| `c`                    | Clears finished calls                                                                                                |
+| `s`                    | Stops the running background call (when there is one) with `TaskStop`                                                |
+| `q`                    | Closes the pane                                                                                                      |
+| Tab / Enter            | Walks the buttons / presses one                                                                                      |
+| Esc                    | Hands the keys back to the prompt; the pane stays                                                                    |
 
 The first line's `[ 1 ▾ ]` holds the focus.
+
+### Runners view
+
+`/shell-watch runners` (or `r`) drops the groups and lists only the calls of
+Pi, Devin, Codex and `ocr`, most urgent first: a summary line
+(`runners · N · k live · f failed`), then one row per run with its verdict
+(`DONE 0`, `RATE_LIMIT …`, `WAITING …`, `FAILED …`, from the runner guard) and,
+on its second line, who started it (`by main`, `by general-purpose: review
+spec`). Rows expand and stop as in the agents view. The view is remembered
+between sessions.
 
 ### Glyphs
 

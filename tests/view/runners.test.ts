@@ -78,7 +78,7 @@ const withRunners = async (
 };
 
 for (const surface of SURFACES) {
-  test(`${surface}: r flips to the runners: flat, no headers, by on the second line`, async ($, on) => {
+  test(`${surface}: r flips to the runners: flat, no headers, by in the head`, async ($, on) => {
     const seen = await withRunners($, on);
     await $.command.run(RUN);
     const pane = await paneOf($, surface, { columns: 100, rows: 30 });
@@ -89,10 +89,9 @@ for (const surface of SURFACES) {
     const found = await pane.findAll({ type: "Text" });
     const texts = found.map((text) => text.text);
     expect(texts).toContain("runners · 2 · 1 live · 1 failed");
-    expect(texts).toContain("by main · bg · codex exec review");
-    expect(texts).toContain(
-      "by general-purpose: Review spec · devin -p 'review the spec'",
-    );
+    expect(texts).toContain("← main");
+    expect(texts).toContain("← general-purpose: Review spec");
+    expect(texts).toContain("bg · codex exec review");
     expect(texts).not.toContain("List");
     expect(texts.some((text) => text.startsWith("ls"))).toBe(false);
     expect(texts).toContain(

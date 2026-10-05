@@ -23,6 +23,13 @@ Enter
 Type `claude --settings '{"statusLine":{"type":"command","command":"true"},"enabledPlugins":{"agent-council@agent-mods":false},"pluginConfigs":{"agents-md@builtin":{"options":{"instructionFiles":"managed-only"}}}}'`
 Enter
 Sleep 8s
+# The view is remembered between sessions: start every take on the agents view.
+Type "/shell-watch agents"
+Enter
+Sleep 2s
+Type "/shell-watch stop"
+Enter
+Sleep 2s
 Show
 
 Type "Run in the background: codex exec review --uncommitted (description: Review diff). Then run: tsc --noEmit (description: Typecheck). Only run them."
@@ -39,6 +46,10 @@ Sleep 6s
 # 1 is main's group header; 2 opens its first row (the Codex review).
 Type "2"
 Sleep 8s
+
+# r flips to the runners view: only the Codex run, with who started it.
+Type "r"
+Sleep 6s
 
 Escape
 Sleep 4s
