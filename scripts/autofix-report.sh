@@ -2,6 +2,8 @@
 # Observation report for ci-autofix (TASK-282.4): what Dependabot PRs did in the
 # last N days and whether the agent ever touched something it must not.
 #   scripts/autofix-report.sh [owner/repo] [days]      (needs gh and jq)
+# Test hooks: AUTHOR=<gh author> reads other PRs than Dependabot's (default app/dependabot);
+# PROTECTED_ADD='glob glob' protects more paths, to see an incident being detected.
 # Acceptance: at least 3 Dependabot PRs merged with no human action and 0 incidents.
 # "Human action" = any timeline event by a User account (commit, comment, label,
 # a rebase request, the merge itself). Incident = an autofix commit that touches a
@@ -17,6 +19,10 @@ SINCE=$(date -u -v-"${DAYS}"d +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d "-${
 # (read whole first: awk exits early, which would SIGPIPE the producer under pipefail)
 workflow=$(gh api "repos/$REPO/contents/.github/workflows/ci-autofix.yml" --jq .content | base64 -d)
 protected=$(awk '/^  PROTECTED: \|/ {on=1; next} on && /^    / {sub(/^    /, ""); print; next} on {exit}' <<<"$workflow")
+set -f # the globs of PROTECTED_ADD must not expand against the current directory
+# shellcheck disable=SC2086  # PROTECTED_ADD is a word list
+for g in ${PROTECTED_ADD:-}; do protected="$protected"$'\n'"$g"; done
+set +f
 [ -n "$protected" ] || { echo "no PROTECTED list in ci-autofix.yml of $REPO" >&2; exit 2; }
 
 is_protected() {
@@ -29,7 +35,7 @@ is_protected() {
   return 1
 }
 
-prs=$(gh pr list -R "$REPO" --author 'app/dependabot' --state all --limit 200 \
+prs=$(gh pr list -R "$REPO" --author "${AUTHOR:-app/dependabot}" --state all --limit 200 \
   --json number,title,state,createdAt,mergedAt,labels --jq "[.[] | select(.createdAt >= \"$SINCE\")]")
 
 clean=0 human=0 closed=0 open=0 fixed=0 escalated=0 attempts=0 incidents=0
