@@ -57,11 +57,11 @@ This repository is its own marketplace:
 ```
 
 It is also listed, with its sibling mods, in the
-[agent-watch](https://github.com/apolenkov/agent-watch) marketplace:
+[agent-mods](https://github.com/apolenkov/agent-mods) marketplace:
 
 ```
-/plugin marketplace add apolenkov/agent-watch
-/plugin install agent-shell-watch@agent-watch
+/plugin marketplace add apolenkov/agent-mods
+/plugin install agent-shell-watch@agent-mods
 ```
 
 Requirements: Claude Code 2.1.287 or later (mods are on by default), and
@@ -214,7 +214,7 @@ See [SECURITY.md](SECURITY.md).
 See [CONTRIBUTING.md](CONTRIBUTING.md): `npm ci`, then `npm run check`; try it
 live with `claude --plugin-dir .`. Releases are cut by release-please; the
 history before 0.2.0 comes from
-[agent-watch](https://github.com/apolenkov/agent-watch). Questions:
+[agent-mods](https://github.com/apolenkov/agent-mods). Questions:
 [SUPPORT.md](SUPPORT.md).
 
 ## License

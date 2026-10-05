@@ -5,7 +5,7 @@
     <path d="M88 160 Q168 82 248 160 Q168 238 88 160 Z" fill="none" stroke="#0A7468" stroke-width="7" stroke-linejoin="round"/>
     <path d="M112 160 H140 L152 134 L168 190 L182 144 L192 160 H224" fill="none" stroke="#132034" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
   <circle cx="1112" cy="52" r="7" fill="#0A7468"/><circle cx="1134" cy="52" r="6" fill="none" stroke="#5F6C80" stroke-width="2"/><circle cx="1156" cy="52" r="6" fill="none" stroke="#5F6C80" stroke-width="2"/>
-  <text x="1094" y="58" text-anchor="end" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="17" font-weight="500" fill="#5F6C80">agent-watch</text>
+  <text x="1094" y="58" text-anchor="end" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="17" font-weight="500" fill="#5F6C80">agent-mods</text>
   <text x="290" y="148" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="62" font-weight="700" letter-spacing="-1.2" fill="#132034">agent-shell-watch</text>
   <text x="292" y="196" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="25" fill="#46546A">See at a glance that your shells and delegated agents are moving.</text>
   <line x1="292" y1="230" x2="1216" y2="230" stroke="#D3DAE5" stroke-width="1.5"/>
