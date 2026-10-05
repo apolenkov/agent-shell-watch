@@ -287,15 +287,20 @@ jobs:
           # other result for the required checks. The patch passed the guard
           # above, so approve them.
           sha=$(git rev-parse HEAD)
-          approved=0
-          for _ in $(seq 12); do
-            for id in $(gh api "repos/$REPO/actions/runs?head_sha=$sha&status=action_required" --jq '.workflow_runs[].id'); do
-              gh api -X POST "repos/$REPO/actions/runs/$id/approve" --silent && approved=$((approved + 1))
+          ready=false
+          for _ in $(seq 18); do
+            runs=$(gh api "repos/$REPO/actions/runs?head_sha=$sha&event=pull_request" --jq '.workflow_runs')
+            for id in $(jq -r '.[] | select(.status == "action_required") | .id' <<<"$runs"); do
+              gh api -X POST "repos/$REPO/actions/runs/$id/approve" --silent || true
             done
-            [ "$approved" -ge 3 ] && break # ci, codeql, dependabot-automerge
+            # Done when ci and codeql (the required workflows) exist and none waits.
+            if jq -e '[.[].name] as $n | ($n | index("ci")) != null and ($n | index("codeql")) != null and all(.[]; .status != "action_required")' <<<"$runs" > /dev/null; then
+              ready=true
+              break
+            fi
             sleep 10
           done
-          [ "$approved" -ge 2 ] || { echo "reason=the fix was pushed but its checks could not be approved" >> "$GITHUB_OUTPUT"; exit 0; }
+          [ "$ready" = true ] || { echo "reason=the fix was pushed but its checks could not be approved" >> "$GITHUB_OUTPUT"; exit 0; }
           # Wait for ci on the new commit; red means the next attempt, started by
           # dispatch because nothing else will start it (the gate counts attempts).
           ci_run=$(gh api "repos/$REPO/actions/runs?head_sha=$sha&event=pull_request" --jq '[.workflow_runs[] | select(.name == "ci")] | sort_by(.created_at) | last | .id')

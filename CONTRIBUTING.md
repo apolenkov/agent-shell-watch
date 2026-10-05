@@ -40,4 +40,5 @@ When `ci` fails on a Dependabot PR (or on your own PR labelled `autofix`),
 failure log. Two attempts per PR (commits carrying an `Autofix-Attempt:` trailer),
 then the PR gets `needs-human` and auto-merge is switched off. The agent has no
 shell and cannot change `.github/`, hooks, check configuration or secrets; a patch
-that does is thrown away. Remove `needs-human` to hand the PR back to the bot.
+that does is thrown away. After `needs-human` a person takes over: the attempt
+count stays with the PR, so the bot will not try a third time.
