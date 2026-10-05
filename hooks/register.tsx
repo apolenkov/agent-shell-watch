@@ -8,11 +8,13 @@ import type { AgentInfo, EngineInterface, Register } from "claude-code";
 import { atom, read, update } from "claude-code";
 
 import type { ShellAgents, ShellCall, ShellView } from "../types";
+import { onLimitsStart } from "./limits.ts";
 import { backfilled, merged, type MessageRow } from "./model/backfill.ts";
 import { classified, hasLive, polled, tailed } from "./model/calls.ts";
 import { type Config, configOf } from "./model/config.ts";
 import { statusLineOf } from "./model/format.ts";
 import { agentTableOf } from "./model/groups.ts";
+import { blockedOf, NO_LIMITS } from "./model/limits.ts";
 import { rowsWantedFor } from "./model/pane-items.ts";
 import { isTailDue, tailPathOf, watchedOf } from "./model/poll.ts";
 import { onRender } from "./pane.tsx";
@@ -49,6 +51,10 @@ const foldsAtom = atom(
 const viewAtom = atom(
   { plugin: "agent-shell-watch", key: "view" } as const,
   "agents" as ShellView,
+);
+const limitsAtom = atom(
+  { plugin: "agent-shell-watch", key: "limits" } as const,
+  NO_LIMITS,
 );
 const openAtom = atom(
   { plugin: "agent-shell-watch", key: "isOpen" } as const,
@@ -90,8 +96,11 @@ const tick = async ($: Engine, config: Config): Promise<void> => {
   if (hasLive(calls)) {
     await update($, nowAtom, () => now);
   }
-  const agents = await read($, agentsAtom);
-  $.ui.status(config.statusLine ? statusLineOf(calls, now, agents) : undefined);
+  const status = statusLineOf(calls, now, {
+    agents: await read($, agentsAtom),
+    blocked: blockedOf(await read($, limitsAtom), now),
+  });
+  $.ui.status(config.statusLine ? status : undefined);
 };
 
 const tailOf = async ($: Engine, path: string): Promise<string | undefined> => {
@@ -252,6 +261,7 @@ export const register: Register = (on, options) => {
     await restore($, config);
     return started;
   });
+  on("session.start", { isInteractive: true }, onLimitsStart);
   on("tool.call", onToolCall);
   on("session.append", onAppend);
   on("command.run", { command: "shell-watch" }, onCommand);

@@ -157,6 +157,16 @@ Pi, Devin, Codex and `ocr`, most urgent first: a summary line
 (`DONE 0`, `RATE_LIMIT …`, `WAITING …`, `FAILED …`, from the runner guard) and, after its label, who started it (`← main`, `← general-purpose: review spec`). Rows expand and stop as in the agents view. The view is remembered
 between sessions.
 
+Under the summary a `limits:` line says whether each executor has room
+(`limits: devin ok · pi ok · codex 100% until Sat 16:48`). It reads
+`~/.local/state/executor-limits/<name>` (one epoch in seconds) and, for Codex,
+the end of the newest rollout in `~/.codex/sessions` (`token_count`'s
+`rate_limits.primary`): an executor is blocked while its epoch is ahead, or
+Codex is at 100% with the window's reset ahead. Damaged or missing data reads
+as ok. The files are read only while the runners view is open or a runner is
+live, at most every 30 s; the status line adds `⏳ codex limit` while a block
+is active.
+
 ### Glyphs
 
 | Glyph        | Meaning                                                                                                                                                       |

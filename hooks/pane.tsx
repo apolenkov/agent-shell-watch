@@ -8,6 +8,7 @@ import { atom, read, update } from "claude-code";
 import type { ShellAgents, ShellCall, ShellView } from "../types";
 import { finishedIds, liveOnly, noticed, tailed } from "./model/calls.ts";
 import { configOf } from "./model/config.ts";
+import { NO_LIMITS } from "./model/limits.ts";
 import { rowsWantedFor } from "./model/pane-items.ts";
 import { type PaneActions, paneTree } from "./view/pane.tsx";
 
@@ -40,6 +41,10 @@ const configAtom = atom(
 const viewAtom = atom(
   { plugin: "agent-shell-watch", key: "view" } as const,
   "agents" as ShellView,
+);
+const limitsAtom = atom(
+  { plugin: "agent-shell-watch", key: "limits" } as const,
+  NO_LIMITS,
 );
 const nowAtom = atom({ plugin: "agent-shell-watch", key: "now" } as const, 0);
 const openAtom = atom(
@@ -192,6 +197,7 @@ export const onRender = async (
       agents: await read($, agentsAtom),
       folds: await read($, foldsAtom),
       view: await read($, viewAtom),
+      limits: await read($, limitsAtom),
       now,
       selected: await read($, selectedAtom),
       columns: e.props.bodyColumns,

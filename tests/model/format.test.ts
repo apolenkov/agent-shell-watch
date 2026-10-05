@@ -208,14 +208,32 @@ test("the status line says whose the leading call is", () => {
       endedAt: 9 * 3_600_000,
     }),
   ];
-  expect(statusLineOf(calls, 9 * 3_600_000, agents)).toBe(
+  expect(statusLineOf(calls, 9 * 3_600_000, { agents })).toBe(
     "⚠ hung 9h main · Wait · +1 failed",
   );
   const [, failed] = calls;
   expect(
-    statusLineOf(failed === undefined ? [] : [failed], 9 * 3_600_000, agents),
+    statusLineOf(failed === undefined ? [] : [failed], 9 * 3_600_000, {
+      agents,
+    }),
   ).toBe("✗ general-purpose · devin · Review RATE_LIMIT 1790000000");
-  expect(statusLineOf([callOf({ agentId: "zz", label: "Go" })], 1000, {})).toBe(
-    "◐ agent zz · Go 0:01",
+  expect(
+    statusLineOf([callOf({ agentId: "zz", label: "Go" })], 1000, {
+      agents: {},
+    }),
+  ).toBe("◐ agent zz · Go 0:01");
+});
+
+test("an executor's active limit adds a segment, and stands alone when idle", () => {
+  const codex = callOf({ runner: "codex", label: "Review" });
+  expect(statusLineOf([codex], 133_000, { blocked: ["codex"] })).toBe(
+    "◐ main · codex · Review 2:13 · ⏳ codex limit",
   );
+  expect(statusLineOf([], 0, { blocked: ["codex", "pi"] })).toBe(
+    "⏳ codex, pi limit",
+  );
+  expect(statusLineOf([codex], 133_000, { blocked: [] })).toBe(
+    statusLineOf([codex], 133_000),
+  );
+  expect(statusLineOf([], 0, { blocked: [] })).toBeUndefined();
 });
