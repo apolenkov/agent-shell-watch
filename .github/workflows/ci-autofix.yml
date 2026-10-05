@@ -65,6 +65,7 @@ env:
     .npmrc
     AGENTS.md
     ci-failure.log
+    tests/night-fix/*
   # The linux-x64 binary package of opencode-ai, pinned by version and registry
   # integrity (npm view, 2026-10-05). The opencode-ai wrapper needs a postinstall.
   OPENCODE_VERSION: 1.18.34
