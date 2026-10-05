@@ -143,7 +143,8 @@ export const exitCodeOf = (text: string): number | undefined => {
 
 /**
  * The last `count` lines of a text, each cut to 200 chars, a trailing
- * newline ignored.
+ * newline ignored, the `[exited with code n]` line of a background task's
+ * file left out: the exit code has its own place, and it is no output.
  * @param text the text
  * @param count how many lines to keep
  * @returns the lines, oldest first
@@ -154,6 +155,7 @@ export const lastLines = (text: string, count: number): readonly string[] =>
     : text
         .replace(/\n$/u, "")
         .split("\n")
+        .filter((line) => !EXIT_NOTE.test(line.trim()))
         .slice(-count)
         .map((line) => line.slice(0, LINE_MAX));
 

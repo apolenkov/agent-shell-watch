@@ -54,7 +54,12 @@ if [ "$mode" = repro ]; then
   evidence=$(jq -r '(.evidence // "") | tostring | .[0:1500]' verdict.raw.json 2>/dev/null || true)
   : > repro.log
   case "$status" in
-    invalid) verdict needs-human "the agent wrote no valid verdict.json" "" ;;
+    invalid)
+      if grep -q 'Maximum steps' agent-summary.txt 2>/dev/null; then
+        verdict needs-human "the agent ran out of steps" ""
+      else
+        verdict needs-human "the agent wrote no valid verdict.json" ""
+      fi ;;
     refuted | needs-human) verdict "$status" "the agent's verdict" "$evidence" ;;
     confirmed)
       [ -f "$test_dir/repro.test.ts" ] || { verdict needs-human "confirmed without a reproduction test" "$evidence"; exit 0; }
