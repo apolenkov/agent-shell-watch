@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.3](https://github.com/apolenkov/agent-shell-watch/compare/v0.5.2...v0.5.3) (2026-10-05)
+
+
+### Bug Fixes
+
+* **ci:** let night-fix work on the current main when it moved during the scan ([#43](https://github.com/apolenkov/agent-shell-watch/issues/43)) ([f2b5eb7](https://github.com/apolenkov/agent-shell-watch/commit/f2b5eb74397b588878cb26d149b63c607c561231))
+
 ## [0.5.2](https://github.com/apolenkov/agent-shell-watch/compare/v0.5.1...v0.5.2) (2026-10-05)
 
 
