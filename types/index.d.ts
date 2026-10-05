@@ -105,6 +105,7 @@ declare module "claude-code" {
       limits: ShellLimits;
       usage: ShellUsage;
       now: number;
+      look: number;
       isOpen: boolean;
       selected: string;
       cleared: readonly string[];

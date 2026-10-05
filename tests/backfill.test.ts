@@ -1,5 +1,7 @@
+import type { AgentInfo } from "claude-code";
 import { expect, mock, test } from "claude-code/testing";
 
+import { advance } from "./fixtures/advance.ts";
 import { paneOf } from "./fixtures/pane-of.ts";
 import { textOf } from "./fixtures/text-of.ts";
 import { world } from "./fixtures/world.ts";
@@ -116,4 +118,30 @@ test("cleared calls stay cleared when the pane opens again", async ($, on) => {
   const text = await textOf(await paneOf($, "terminal"));
   expect(text).not.toContain("E2E");
   expect(text).toContain("Wait");
+});
+
+test("a hung call of a finished agent is closed by the transcript", async ($, on) => {
+  const clock = mock.clock(on);
+  const agents = [{ ...AGENTS[0], id: "a3" }] as AgentInfo[];
+  const seen = world(on, {}, agents);
+  const grep = {
+    role: "assistant",
+    text: "",
+    toolUses: [bg("o1", "b9", "Grep")],
+  };
+  seen.transcripts.set("a3", [grep]);
+  await $.session.start(START);
+  await advance(clock, 11 * 60_000);
+  expect(seen.statuses.at(-1)).toContain("hung");
+  agents[0] = { ...AGENTS[1], id: "a3" } as AgentInfo;
+  seen.transcripts.set("a3", [
+    grep,
+    {
+      role: "user",
+      text: '<task-notification><task-id>b9</task-id><status>completed</status><summary>Background command "x" completed (exit code 0)</summary></task-notification>',
+      toolUses: [],
+    },
+  ]);
+  await advance(clock, 40_000);
+  expect(seen.statuses.at(-1)).not.toContain("hung");
 });

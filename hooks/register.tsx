@@ -16,7 +16,13 @@ import { statusLineOf } from "./model/format.ts";
 import { agentTableOf } from "./model/groups.ts";
 import { blockedOf, NO_LIMITS } from "./model/limits.ts";
 import { rowsWantedFor } from "./model/pane-items.ts";
-import { isTailDue, tailPathOf, watchedOf } from "./model/poll.ts";
+import {
+  isRepairDue,
+  isTailDue,
+  liveAgentsOf,
+  tailPathOf,
+  watchedOf,
+} from "./model/poll.ts";
 import { onRender } from "./pane.tsx";
 import { onClose, onCommand, PANE } from "./slash-command.ts";
 import { onAppend, onToolCall } from "./track.ts";
@@ -61,6 +67,8 @@ const openAtom = atom(
   false,
 );
 
+// When a hung call last sent the poller to the transcripts.
+const lookAtom = atom({ plugin: "agent-shell-watch", key: "look" } as const, 0);
 const TICK_MS = 1000;
 const POLL_MS = 2000;
 const TAIL_LINES = "40";
@@ -83,10 +91,7 @@ const refreshAgents = async (
   $: Engine,
   listed: readonly AgentInfo[] | undefined,
 ): Promise<void> => {
-  if (listed === undefined) {
-    return;
-  }
-  const table = agentTableOf(listed);
+  const table = agentTableOf(listed ?? []);
   await update($, agentsAtom, (known) => ({ ...known, ...table }));
 };
 
@@ -160,6 +165,12 @@ const poll = async ($: Engine, config: Config): Promise<void> => {
   await update($, callsAtom, (calls) =>
     calls.map((call) => classified(call, now, config.limits)),
   );
+  // A hung call may have ended unseen: the transcript says so.
+  const last = await read($, lookAtom);
+  if (isRepairDue(await read($, callsAtom), now, last)) {
+    await update($, lookAtom, () => now);
+    await backfill($, config);
+  }
   // Subagents' statuses feed their groups' rollups.
   if (calls.some((call) => call.agentId !== undefined)) {
     await refreshAgents($, await agentsOf($));
@@ -210,13 +221,16 @@ const rowsOf = async (
   }
 };
 
-// Calls made before the mod loaded (enabled mid-session, a reload, an
-// update): rebuilt from the main transcript and each running agent's.
+// Calls made before the mod loaded, or whose ending it missed: rebuilt from
+// the main transcript and each agent's that runs or holds a running call.
 const backfill = async ($: Engine, config: Config): Promise<void> => {
   const now = await $.clock.now();
   const listed = await agentsOf($);
   await refreshAgents($, listed);
-  const agents = (listed ?? []).filter((agent) => agent.status === "running");
+  const holders = liveAgentsOf(await read($, callsAtom));
+  const agents = (listed ?? []).filter(
+    (one) => one.status === "running" || holders.has(one.id),
+  );
   const main = backfilled(await rowsOf($), undefined, now);
   const subs = await Promise.all(
     agents.map(async (agent) =>

@@ -1,6 +1,12 @@
 import { expect, test } from "claude-code/testing";
 
-import { isTailDue, tailPathOf, watchedOf } from "../../hooks/model/poll.ts";
+import {
+  isRepairDue,
+  isTailDue,
+  liveAgentsOf,
+  tailPathOf,
+  watchedOf,
+} from "../../hooks/model/poll.ts";
 import { callOf } from "../fixtures/call-of.ts";
 
 test("live calls with a file, and runners owing a verdict, are watched", () => {
@@ -40,4 +46,20 @@ test("live progress is read from the watch file, the final verdict from the outp
   expect(tailPathOf(foreground)).toBe("/t/w");
   expect(isTailDue(foreground, { isNew: true, isWanted: true })).toBe(true);
   expect(tailPathOf(callOf())).toBeUndefined();
+});
+
+test("a hung call sends the poller to the transcripts, at most every 30 s", () => {
+  const hung = [callOf({ status: "hung" })];
+  expect(isRepairDue(hung, 40_000, 0)).toBe(true);
+  expect(isRepairDue(hung, 40_000, 20_000)).toBe(false);
+  expect(isRepairDue([callOf()], 40_000, 0)).toBe(false);
+});
+
+test("the agents that hold a running call are the ones to read", () => {
+  const calls = [
+    callOf({ id: "a", agentId: "x" }),
+    callOf({ id: "b", agentId: "y", status: "done" }),
+    callOf({ id: "c" }),
+  ];
+  expect([...liveAgentsOf(calls)]).toEqual(["x"]);
 });

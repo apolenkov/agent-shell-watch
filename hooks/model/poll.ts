@@ -44,3 +44,35 @@ export const tailPathOf = (call: ShellCall): string | undefined =>
 export const isTailDue = (call: ShellCall, need: TailNeed): boolean =>
   tailPathOf(call) !== undefined &&
   (call.needsTail === true || (need.isNew && need.isWanted));
+
+const REPAIR_MS = 30_000;
+
+/**
+ * Whether a hung call should send the poller to the transcripts again: one
+ * may have ended unseen, and the last look was a while ago.
+ * @param calls the list
+ * @param now the clock's time
+ * @param repairedAt when the poller last looked
+ * @returns true when a look is due
+ */
+export const isRepairDue = (
+  calls: readonly ShellCall[],
+  now: number,
+  repairedAt: number,
+): boolean =>
+  calls.some((call) => call.status === "hung") && now - repairedAt > REPAIR_MS;
+
+/**
+ * The ids of the agents that hold a running call.
+ * @param calls the list
+ * @returns their ids
+ */
+export const liveAgentsOf = (
+  calls: readonly ShellCall[],
+): ReadonlySet<string> =>
+  new Set(
+    calls
+      .filter(isLive)
+      .map((call) => call.agentId)
+      .filter((id) => id !== undefined),
+  );

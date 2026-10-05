@@ -3,7 +3,7 @@
  * loaded (enabled mid-session, a hot reload, an update).
  */
 import type { ShellCall } from "../../types";
-import { noticed, settled, started, trimmed } from "./calls.ts";
+import { isLive, noticed, settled, started, trimmed } from "./calls.ts";
 import { outcomeOf } from "./outcome.ts";
 import { noticesOf, type TaskNotice } from "./parse.ts";
 
@@ -90,6 +90,25 @@ export const backfilled = (
   );
 };
 
+// The transcript knows how a call ended even when the mod missed the event:
+// a call the state still holds as running takes its ending from the rebuilt
+// one (its own start time and label stay).
+const reconciled = (known: ShellCall, rebuilt: ShellCall): ShellCall =>
+  isLive(known) && !isLive(rebuilt)
+    ? {
+        ...known,
+        status: rebuilt.status,
+        ...(rebuilt.endedAt !== undefined && { endedAt: rebuilt.endedAt }),
+        tail: rebuilt.tail,
+        stderr: rebuilt.stderr,
+        ...(rebuilt.exitCode !== undefined && { exitCode: rebuilt.exitCode }),
+        ...(rebuilt.verdict !== undefined && { verdict: rebuilt.verdict }),
+        ...(rebuilt.needsTail !== undefined && {
+          needsTail: rebuilt.needsTail,
+        }),
+      }
+    : known;
+
 /** How many calls to keep, and which ids never to bring back. */
 export interface Keep {
   readonly max: number;
@@ -98,7 +117,8 @@ export interface Keep {
 
 /**
  * The state's calls and the rebuilt ones it lacks, in transcript order (the
- * state's own copy wins, calls only the state knows follow), without the
+ * state's own copy wins, unless it still runs and the transcript says it
+ * ended; calls only the state knows follow), without the
  * ones the person cleared, cut to `max` (the oldest finished dropped first).
  * @param known the calls in state
  * @param rebuilt the calls rebuilt from the transcript, oldest first
@@ -117,7 +137,10 @@ export const merged = (
   const ordered = [
     ...rebuilt
       .filter((call) => !gone.has(call.id))
-      .map((call) => byId.get(call.id) ?? call),
+      .map((call) => {
+        const own = byId.get(call.id);
+        return own === undefined ? call : reconciled(own, call);
+      }),
     ...known.filter((call) => !rebuiltIds.has(call.id)),
   ];
   return trimmed(ordered, max);
