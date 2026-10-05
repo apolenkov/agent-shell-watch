@@ -46,3 +46,24 @@ count stays with the PR, so the bot will not try a third time.
 Labels: `autofix` opts one of your own PRs in; the bot sets `needs-human` when it stops.
 
 The autofix bot never changes workflows, hooks, lint config or the scripts in `package.json`.
+
+## Night fix
+
+The nightly `ocr scan` (night-review) finds things, and about half of its "critical"
+findings are false. `.github/workflows/night-fix.yml` therefore verifies every
+finding (up to 3 per scan: critical or high, bug or security) before it changes
+anything:
+
+- `confirmed`: a reproduction test, `tests/night-fix/<id>/repro.test.ts`, fails on
+  current main. Only then does an agent fix it and the fix goes up as a PR
+  (branch `night-fix/<id>`, label `night-fix`), which the autofix bot and
+  auto-merge treat like a Dependabot PR: required checks, at most two attempts in
+  total (the first commit already carries `Autofix-Attempt: 1`), then `needs-human`.
+- `refuted` (the code lines that disprove it are cited) and `needs-human`
+  (anything else, also real-looking but untestable): no change, one line in the
+  comment of the run on the issue "Night review findings".
+
+It never changes `.github/`, git hooks, check configuration, existing tests, or
+names and scripts of dependencies; it only adds the reproduction test. A patch
+that does is thrown away and the finding becomes `needs-human`. The agents have no
+shell, and the LLM token never reaches a job that can write.
