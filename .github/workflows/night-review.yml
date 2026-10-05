@@ -28,6 +28,8 @@ env:
   # dispatching work past it and still publishes what it found.
   REVIEW_TOKEN_BUDGET: "3000000"
   SCAN_TOKEN_BUDGET: "6000000"
+  # OpenCode Go refuses a request without a session id (HTTP 400 MissingSessionID).
+  OCR_LLM_EXTRA_HEADERS: x-opencode-session=night-review-${{ github.run_id }}
 
 jobs:
   gate:
@@ -93,6 +95,7 @@ jobs:
           llm_auth_token: ${{ secrets.OCR_LLM_AUTH_TOKEN }}
           llm_model: ${{ env.OCR_LLM_MODEL }}
           llm_use_anthropic: "false"
+          llm_extra_headers: ${{ env.OCR_LLM_EXTRA_HEADERS }}
           ocr_version: ${{ env.OCR_VERSION }}
           base_ref: ${{ needs.gate.outputs.base }}
           head_sha: ${{ needs.gate.outputs.sha }}
@@ -132,6 +135,7 @@ jobs:
           ocr config set llm.url "$OCR_LLM_URL"
           ocr config set llm.model "$OCR_LLM_MODEL"
           ocr config set llm.use_anthropic false
+          ocr config set llm.extra_headers "$OCR_LLM_EXTRA_HEADERS"
           ocr config set llm.protocol openai
           # shellcheck disable=SC2016  # OCR runs the command, which expands the variable
           ocr config set llm.auth_token_cmd 'printf "%s" "$OCR_LLM_TOKEN"'
