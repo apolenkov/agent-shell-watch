@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Roll ci-autofix.yml and night-review.yml out to another repository (TASK-282.4).
-#   scripts/rollout-autofix.sh <repo> [--apply]       repo = a name under apolenkov/
+#   scripts/rollout-autofix.sh <repo> [--apply|--cleanup]   repo = a name under apolenkov/
 # Default is a dry run: preflight checks of the target, the two workflows rendered from
 # THIS repository's main with the per-repo settings of scripts/rollout/<repo>.conf, and
 # actionlint on both. --apply then labels the target, opens ONE PR there (branch
 # ci/autofix-rollout, worktree of ~/work/<repo>, the repo's own hooks run) and turns on
 # auto-merge. Run --apply on one repository first and watch it before the rest.
+# --cleanup, after the PR merged, removes the worktree and the branch. scripts/rollout-all.sh
+# drives all targets in turn.
 # The first --apply has not been run yet: the pilot has been observed for 0 of 14 days.
 # shellcheck disable=SC2015,SC2016  # A && B || C is meant (fail never fails); the jq/shell text is literal
 set -euo pipefail
@@ -21,6 +23,15 @@ CLONE='' CODEQL_NAME='' PROTECTED_EXTRA='' COMMITLINT='' HOLD=''
 # shellcheck disable=SC1090
 source "$conf"
 : "${CI_NAME:?}" "${FIXABLE_RE:?}" "${NODE_LINE:?}"
+
+if [ "$apply" = --cleanup ]; then
+  clone="$HOME/work/${CLONE:-$repo}"
+  git -C "$clone" worktree remove --force "$clone/../$repo-autofix-rollout" 2>/dev/null || true
+  git -C "$clone" branch -D ci/autofix-rollout 2>/dev/null || true
+  git -C "$clone" push -q origin --delete ci/autofix-rollout 2>/dev/null || true
+  git -C "$clone" worktree prune
+  echo "cleaned $repo"; exit 0
+fi
 
 problems=0
 note() { echo "$1"; }
@@ -47,6 +58,7 @@ note "required checks: $(gh api "repos/$OWNER/$repo/branches/main/protection" --
 
 # --- render ----------------------------------------------------------------------------
 out=$(mktemp -d)
+trap '[ -n "${KEEP:-}" ] || rm -rf "$out"' EXIT # KEEP=1 leaves the rendered files to read
 for f in ci-autofix night-review; do
   gh api "repos/$OWNER/agent-shell-watch/contents/.github/workflows/$f.yml" --jq .content | base64 -d >"$out/$f.yml"
 done
@@ -80,7 +92,7 @@ fi
 replace_once "$n" 'workflows: [ci]' "workflows: [$CI_NAME]"
 replace_once "$n" 'node-version-file: .nvmrc' "$NODE_LINE"
 (cd "$out" && actionlint ci-autofix.yml night-review.yml) && note "ok  actionlint on both rendered workflows" || fail "actionlint rejected a rendered workflow"
-note "rendered into $out"
+note "rendered into $out (KEEP=1 keeps it)"
 
 if [ "$problems" -gt 0 ]; then echo "$problems problem(s): not applying"; exit 1; fi
 [ "$apply" = --apply ] || { echo "dry run clean. Re-run with --apply to open the PR."; exit 0; }
