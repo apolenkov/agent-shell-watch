@@ -41,8 +41,12 @@ when the repository has the secret `ANTHROPIC_API_KEY`; without the secret
 so until someone adds the key this is a local step, not an automatic check.
 
 It cannot see the status line, the pane or a background runner's verdict (a
-headless session draws none); those are checked by hand in an interactive
-session.
+headless session draws none). `npm run smoke:live` does: it starts a real
+interactive session in tmux over the stand-ins of `demo/bin`, captures the
+screen and checks that the status line is up, the runners view opens, the
+background runner's verdict shows and its `[exited with code n]` note does not.
+It needs tmux and a Claude login, runs in about 15 s for a few cents, and is
+local only (no tmux session with a login in CI).
 
 ## Dependency holds
 
