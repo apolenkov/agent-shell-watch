@@ -47,6 +47,10 @@ Labels: `autofix` opts one of your own PRs in; the bot sets `needs-human` when i
 
 The autofix bot never changes workflows, hooks, lint config or the scripts in `package.json`.
 
+`scripts/autofix-report.sh [owner/repo] [days]` reports what Dependabot PRs and the bot did
+over the last days (clean merges, fix commits, `needs-human`, incidents) and says whether
+the observation criterion (3 clean Dependabot PRs, 0 incidents) is met.
+
 ## Night fix
 
 The nightly `ocr scan` (night-review) finds things, and about half of its "critical"
