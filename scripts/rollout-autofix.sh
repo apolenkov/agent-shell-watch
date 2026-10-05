@@ -16,8 +16,8 @@ OWNER=apolenkov
 here=$(cd "$(dirname "$0")" && pwd)
 conf="$here/rollout/$repo.conf"
 [ -f "$conf" ] || { echo "no $conf" >&2; exit 2; }
-# CI_NAME FIXABLE_RE CODEQL_NAME NODE_LINE PROTECTED_EXTRA COMMITLINT HOLD
-CODEQL_NAME='' PROTECTED_EXTRA='' COMMITLINT='' HOLD=''
+# CI_NAME FIXABLE_RE CODEQL_NAME NODE_LINE PROTECTED_EXTRA COMMITLINT HOLD CLONE (dir under ~/work, default the repo name)
+CLONE='' CODEQL_NAME='' PROTECTED_EXTRA='' COMMITLINT='' HOLD=''
 # shellcheck disable=SC1090
 source "$conf"
 : "${CI_NAME:?}" "${FIXABLE_RE:?}" "${NODE_LINE:?}"
@@ -84,7 +84,7 @@ if [ "$problems" -gt 0 ]; then echo "$problems problem(s): not applying"; exit 1
 [ "$apply" = --apply ] || { echo "dry run clean. Re-run with --apply to open the PR."; exit 0; }
 
 # --- apply -----------------------------------------------------------------------------
-clone="$HOME/work/$repo"
+clone="$HOME/work/${CLONE:-$repo}"
 [ -d "$clone/.git" ] || { echo "no local clone $clone" >&2; exit 4; }
 for l in needs-human autofix; do
   gh label create "$l" -R "$OWNER/$repo" --color "$([ "$l" = needs-human ] && echo D93F0B || echo 0E8A16)" \
@@ -99,6 +99,9 @@ if [ -n "$COMMITLINT" ] && ! grep -q 'Signed-off-by: dependabot' "$wt/$COMMITLIN
   awk '{print} /^  extends: \[.*\],?$/ && !d {print "  ignores: [\n    (message: string): boolean =>\n      message.includes(\"Signed-off-by: dependabot[bot]\"),\n  ],"; d=1}' "$wt/$COMMITLINT" >"$wt/$COMMITLINT.new"
   mv "$wt/$COMMITLINT.new" "$wt/$COMMITLINT"
 fi
+# The repo's hooks (commitlint, full check before push) need its dependencies in the worktree.
+(cd "$wt" && npm ci --ignore-scripts --no-audit --no-fund >/dev/null \
+  && { [ ! -f node_modules/@anthropic-ai/claude-code/install.cjs ] || node node_modules/@anthropic-ai/claude-code/install.cjs >/dev/null; })
 git -C "$wt" add .github/workflows/ci-autofix.yml .github/workflows/night-review.yml ${COMMITLINT:+"$COMMITLINT"}
 git -C "$wt" commit -q -m "ci(repo): add ci-autofix and night-review" -m "Same workflows as agent-shell-watch (TASK-282), set to this repository's
 CI workflow name, fixable job and protected paths." -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
