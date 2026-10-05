@@ -67,6 +67,18 @@ anything:
   (anything else, also real-looking but untestable): no change, one line in the
   comment of the run on the issue "Night review findings".
 
+Issues: a `confirmed` or `needs-human` finding gets one issue (labels `night-finding`,
+`ocr-scan`, `severity:*`), found again by the fingerprint on its first line
+(`<!-- night-fp: ... -->`: path, category and the whitespace-collapsed code, not the line
+numbers or the model's wording). The fix PR says `Fixes #N`, so merging it closes the
+issue. A refuted finding or a run with no verdict (the verifier ran out of steps, no
+valid `verdict.json`) gets no issue. When a complete scan (under 90% of its token
+budget) no longer reports a finding, its open issue is closed with the label
+`scan-closed`; if the finding comes back, that issue is reopened. Do not dispatch
+night-fix while a scheduled run is going: both could open the same issue.
+
+The comment of a run also states the tokens it spent (scan, verify, fix agents).
+
 It never changes `.github/`, git hooks, check configuration, existing tests, or
 names and scripts of dependencies; it only adds the reproduction test. A patch
 that does is thrown away and the finding becomes `needs-human`. The agents have no
