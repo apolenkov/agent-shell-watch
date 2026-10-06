@@ -59,7 +59,7 @@ Each limit says what enforces it. "Platform" means GitHub refuses it regardless 
 | Touch protected paths                                   | The `PROTECTED` list as files (`.github/`, git config, `lefthook.yml`, lint/format/type/knip/commitlint config files, `.nvmrc`, `.npmrc`, `.env*`, keys, opencode config, `AGENTS.md`, `CODEOWNERS`). The same config under a `prettier` or `commitlint` key of `package.json`, and the plugin's own `hooks/` directory, are not guarded. Twice: opencode `edit` deny rules, and the `push` job throws the whole patch away if any path matches. Code.                                |
 | Make a larger or riskier change than a small patch      | The guard rejects deletions, symlinks, more than 25 files or 600 lines (the `night-fix` guard also submodules and binaries), a change to `package.json` scripts or dependency names, a lockfile `resolved` outside registry.npmjs.org (host only: which package sits behind a registry URL is not checked). Two attempts per PR (`Autofix-Attempt:` trailers), then `needs-human`. Code.                                                                                              |
 | Cut a release                                           | The release PR comes from release-please and nobody arms auto-merge on it: Dependabot's workflow acts only for `dependabot[bot]`, `night-act.sh` only on `night-fix` PRs, `night-review` skips `release-please--*` branches, and `ci-autofix` does not accept a bot PR without the `night-fix` label. Code. It does shape the next release: every merged factory commit is a `fix:` (a patch bump and a CHANGELOG line), and the release-please files are not protected in the pilot. |
-| Change an existing test (night-fix) or weaken a check   | `night-fix`: the patch must add files under `tests/night-fix/<id>/` and may not touch any other path under `tests/`. `ci-autofix` protects only `tests/night-fix/*`; the rest of `tests/` is open (residual risk below).                                                                                                                                                                                                                                                              |
+| Change an existing test (night-fix) or weaken a check   | `night-fix`: the patch must add files under `tests/night-fix/<id>/` and may not touch any other path under `tests/`. `ci-autofix` protects all of `tests/*` since 2026-10-06 (decision below), so a fix that needs a test edit ends in `needs-human` after two attempts.                                                                                                                                                                                                              |
 
 ## Who gets in
 
@@ -119,10 +119,10 @@ Residual risk, accepted for now:
   has passwordless `sudo`: that separation is hygiene, not a barrier. The fixer may also edit
   `package.json`, whose `scripts` the guard checks only afterwards, in `act`. The worst case is the
   OpenCode Go token (a $60-per-month allowance), not repository write access.
-- An injected instruction can still produce a change in `src/` or in
-  existing `tests/` that passes the checks and merges, because **no human review is required on `main`**
-  (zero required approvals) and a protected path list cannot say what an assertion should be. Emptying
-  or weakening a test is not detected by the guard. `@dependabot rebase` or `recreate` wipes the bot's
+- An injected instruction can still produce a change in `src/` that passes the checks and merges,
+  because **no human review is required on `main`** (zero required approvals) and a path list cannot
+  say what the code should do. Tests were open to the same until 2026-10-06 and are now protected
+  (see "Decision of 2026-10-06"); the incident report still flags a commit that weakens tests. `@dependabot rebase` or `recreate` wipes the bot's
   commits and so resets the attempt counter. Mitigation: size and path limits, two attempts, the
   `Autofix-Run` trailer for audit, the incident report below.
 - The lockfile guard checks the host of `resolved`, not which package or integrity sits behind it.
@@ -214,8 +214,22 @@ the workflows again and lists the open factory PRs that now lack auto-merge (re-
 `gh pr merge --auto --squash <n>`); Dependabot's workflow re-arms its own PRs on their next event.
 
 After a stop: write the incident into the backlog (what, which commit, which gate failed), fix the
-gate, change this ADR if a limit moved, then resume. Nothing runs `autofix-report.sh` on a
-schedule; it is run by hand after each Dependabot PR and before every rollout step.
+gate, change this ADR if a limit moved, then resume. `factory-watch.yml` runs
+`autofix-report.sh` for every factory repository once a day (05:41 UTC) and opens one issue in
+agent-shell-watch per incident or suspect it has not reported before (label `factory-incident`, the
+title carries a fingerprint; an issue the owner closed is not reopened and the finding is not
+reported again). It is also run by hand before every rollout step.
+
+## Decision of 2026-10-06: tests protected, daily watch
+
+The owner answered "I do not know" to the residual risk that a fix may weaken a test and merge unseen;
+the coordinator, to whom the owner delegates such decisions, decided: (1) `tests/*` joins the
+`PROTECTED` list of `ci-autofix.yml` in every repository that has a copy (the agent's `edit` rules and
+the guard of the `push` job both follow the list); (2) the report runs daily and opens an issue (above).
+A required human approval on `main` is **not** introduced: it would stop Dependabot's auto-merge
+too. The price of (1): a fix that needs a test edit goes to `needs-human` after two attempts.
+Not verified live: `factory-watch.yml` has not run on its schedule yet; its issue creation and
+de-duplication were drilled by hand with two real findings, which were deleted afterwards.
 
 ## Measured so far
 
@@ -285,8 +299,6 @@ schedule; it is run by hand after each Dependabot PR and before every rollout st
 - Restrict environment `ci` to `main` and require SHA pinning in the repository settings.
 - Make `escalate` run when the `fix` job fails, so an LLM outage labels the PR; retry a job that
   GitHub never started (`night-review` and `ci-autofix` do not).
-- Protect `tests/` in `ci-autofix` as `night-fix` does, or detect weakened assertions.
-- Run `autofix-report.sh` on a schedule and open an issue on the first incident.
 - Retry of a job GitHub never started: not added; the one measured case was a GitHub incident, where a
   retry cannot help. Revisit if such losses appear outside an incident.
 - One shared copy of `PROTECTED` instead of one per workflow and repository. The opencode and OCR pins
