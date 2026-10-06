@@ -26,5 +26,6 @@
     "jsxFactory": "h",
     "jsxFragmentFactory": "Fragment"
   },
-  "include": ["engine-types", "types", "hooks", "tests"]
+  "include": ["engine-types", "types", "hooks", "tests"],
+  "exclude": ["tests/night-fix"]
 }

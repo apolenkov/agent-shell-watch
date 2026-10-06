@@ -31,14 +31,20 @@ verdict() {
   echo "verdict: $1 ($2)"
 }
 
-# copy_tree slim|full : the workspace without .git and node_modules (linked).
+# copy_tree slim|full : the workspace without .git and node_modules (linked). `full`
+# also drops the files of this run (verdicts, logs, the patch): `npm run check` must
+# see the tree the PR will contain, not the runner's workspace — prettier flags them.
 copy_tree() {
   local dst
   dst=$(mktemp -d)
   if [ "$1" = slim ]; then
     rsync -a --exclude .git --exclude node_modules --include "$test_dir/***" --exclude '*.test.ts' --exclude '*.test.tsx' ./ "$dst/"
   else
-    rsync -a --exclude .git --exclude node_modules ./ "$dst/"
+    rsync -a --exclude .git --exclude node_modules \
+      --exclude 'verdict*.json' --exclude 'finding.json' --exclude 'repro.log' \
+      --exclude 'repro.full.log' --exclude 'fixed-tests.log' --exclude 'fix.patch' \
+      --exclude 'agent-*.jsonl' --exclude 'agent-*.txt' --exclude '*-body.md' \
+      ./ "$dst/"
   fi
   ln -s "$PWD/node_modules" "$dst/node_modules"
   echo "$dst"
