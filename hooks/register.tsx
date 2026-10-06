@@ -242,6 +242,7 @@ const backfill = async ($: Engine, config: Config): Promise<void> => {
     merged(calls, [...main, ...subs.flat()], {
       max: config.maxCalls,
       cleared,
+      scope: config.scope,
     }),
   );
 };
@@ -261,7 +262,7 @@ export const register: Register = (on, options) => {
     await $.command.register({
       name: PANE,
       description:
-        "Live Bash calls, background tasks and runner runs (runners|agents|clear|stop)",
+        "Live agent runs (Codex, Pi, Devin, ocr); scope: all adds every Bash call (runners|agents|clear|stop)",
       argumentHint: "[runners|agents|clear|stop]",
       immediate: true,
     });

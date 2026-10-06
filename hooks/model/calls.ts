@@ -2,7 +2,7 @@
  * Pure transitions of the call list: a call starts, settles, is polled for
  * freshness, read for its tail, noticed finished in the background, trimmed.
  */
-import type { ShellCall, ShellStatus } from "../../types";
+import type { ShellCall, ShellScope, ShellStatus } from "../../types";
 import {
   exitCodeOf,
   isNoMatchCommand,
@@ -75,6 +75,17 @@ export const isLive = (call: ShellCall): boolean => LIVE.has(call.status);
  */
 export const hasLive = (calls: readonly ShellCall[]): boolean =>
   calls.some((call) => LIVE.has(call.status));
+
+/**
+ * Whether the watch scope keeps the call: `all` keeps every call, `runners`
+ * only delegated agent runs — a recognised runner (Codex, Pi, Devin, `ocr`)
+ * or a guard-wrapped one (a `--watch-file` it watches).
+ * @param call the call
+ * @param scope the configured scope
+ * @returns true when the call is watched under the scope
+ */
+export const isInScope = (call: ShellCall, scope: ShellScope): boolean =>
+  scope === "all" || call.runner !== undefined || call.watchPath !== undefined;
 
 /**
  * The calls that still run: what `clear` keeps.

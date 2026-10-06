@@ -14,7 +14,13 @@ import type {
 import { atom, read, update } from "claude-code";
 
 import type { ShellAgents, ShellCall } from "../types";
-import { noticed, settled, started, trimmed } from "./model/calls.ts";
+import {
+  isInScope,
+  noticed,
+  settled,
+  started,
+  trimmed,
+} from "./model/calls.ts";
 import { configOf } from "./model/config.ts";
 import { agentTableOf } from "./model/groups.ts";
 import { outcomeOf } from "./model/outcome.ts";
@@ -88,7 +94,7 @@ export const onToolCall = async (
   if (e.tool !== "Bash") {
     return next(e);
   }
-  const { maxCalls } = await read($, configAtom);
+  const { maxCalls, scope } = await read($, configAtom);
   const call = started(
     {
       tool_use_id: e.tool_use_id,
@@ -98,17 +104,23 @@ export const onToolCall = async (
     },
     await $.clock.now(),
   );
-  await update($, callsAtom, (calls) => trimmed([...calls, call], maxCalls));
-  if (e.agentId !== undefined) {
-    await nameAgent($, e.agentId);
+  // The runners scope watches delegated agent runs only; an ordinary call is
+  // still run, just not kept.
+  if (isInScope(call, scope)) {
+    await update($, callsAtom, (calls) => trimmed([...calls, call], maxCalls));
+    if (e.agentId !== undefined) {
+      await nameAgent($, e.agentId);
+    }
   }
   const ran = await next(e);
-  const now = await $.clock.now();
-  await update($, callsAtom, (calls) =>
-    calls.map((one) =>
-      one.id === call.id ? settled(one, outcomeOf(ran), now) : one,
-    ),
-  );
+  if (isInScope(call, scope)) {
+    const now = await $.clock.now();
+    await update($, callsAtom, (calls) =>
+      calls.map((one) =>
+        one.id === call.id ? settled(one, outcomeOf(ran), now) : one,
+      ),
+    );
+  }
   return ran;
 };
 

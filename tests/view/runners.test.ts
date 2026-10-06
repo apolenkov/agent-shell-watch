@@ -78,41 +78,47 @@ const withRunners = async (
 };
 
 for (const surface of SURFACES) {
-  test(`${surface}: r flips to the runners: flat, no headers, by in the head`, async ($, on) => {
-    const seen = await withRunners($, on);
-    await $.command.run(RUN);
-    const pane = await paneOf($, surface, { columns: 100, rows: 30 });
-    expect(await labelOf(pane, "view")).toBe("r runners");
-    expect(await pane.find({ key: "fold" })).toBeDefined();
+  test(
+    `${surface}: r flips to the runners: flat, no headers, by in the head`,
+    { options: { scope: "all" } },
+    async ($, on) => {
+      const seen = await withRunners($, on);
+      await $.command.run(RUN);
+      const pane = await paneOf($, surface, { columns: 100, rows: 30 });
+      expect(await labelOf(pane, "view")).toBe("r runners");
+      expect(await pane.find({ key: "fold" })).toBeDefined();
 
-    await pane.press({ key: "view" });
-    const found = await pane.findAll({ type: "Text" });
-    const texts = found.map((text) => text.text);
-    expect(texts).toContain("runners · 2 · 1 live · 1 failed");
-    expect(texts).toContain("← main · —");
-    expect(texts).toContain("← general-purpose: Review spec · —");
-    expect(texts).toContain("bg · codex exec review");
-    expect(texts).not.toContain("List");
-    expect(texts.some((text) => text.startsWith("ls"))).toBe(false);
-    expect(texts).toContain(
-      "1–9 open · r agents · c clear · q close · Esc → prompt",
-    );
-    expect(await labelOf(pane, "view")).toBe("r agents");
-    expect(await pane.find({ key: "fold" })).toBeUndefined();
-    const buttons = await pane.findAll({ type: "Button" });
-    const keys = buttons.map((button) => button.key);
-    expect(keys.some((key) => key?.startsWith("group:") === true)).toBe(false);
-    const rows = buttons.filter((b) => b.key?.startsWith("row:") === true);
-    expect(rows.map((row) => row.props["hotkey"])).toEqual(["1", "2"]);
-    // the failed devin first, then the live codex
-    expect(rows[0]?.key).toBe("row:d1");
-    expect(rows[1]?.key).toMatch(/^row:toolu_/u);
-    expect(seen.focused.at(-1)).toBe(true);
+      await pane.press({ key: "view" });
+      const found = await pane.findAll({ type: "Text" });
+      const texts = found.map((text) => text.text);
+      expect(texts).toContain("runners · 2 · 1 live · 1 failed");
+      expect(texts).toContain("← main · —");
+      expect(texts).toContain("← general-purpose: Review spec · —");
+      expect(texts).toContain("bg · codex exec review");
+      expect(texts).not.toContain("List");
+      expect(texts.some((text) => text.startsWith("ls"))).toBe(false);
+      expect(texts).toContain(
+        "1–9 open · r agents · c clear · q close · Esc → prompt",
+      );
+      expect(await labelOf(pane, "view")).toBe("r agents");
+      expect(await pane.find({ key: "fold" })).toBeUndefined();
+      const buttons = await pane.findAll({ type: "Button" });
+      const keys = buttons.map((button) => button.key);
+      expect(keys.some((key) => key?.startsWith("group:") === true)).toBe(
+        false,
+      );
+      const rows = buttons.filter((b) => b.key?.startsWith("row:") === true);
+      expect(rows.map((row) => row.props["hotkey"])).toEqual(["1", "2"]);
+      // the failed devin first, then the live codex
+      expect(rows[0]?.key).toBe("row:d1");
+      expect(rows[1]?.key).toMatch(/^row:toolu_/u);
+      expect(seen.focused.at(-1)).toBe(true);
 
-    await pane.press({ key: "view" });
-    expect(await labelOf(pane, "view")).toBe("r runners");
-    expect(await textOf(pane)).toContain("List");
-  });
+      await pane.press({ key: "view" });
+      expect(await labelOf(pane, "view")).toBe("r runners");
+      expect(await textOf(pane)).toContain("List");
+    },
+  );
 
   test(`${surface}: a pane with no runner says so`, async ($, on) => {
     mock.clock(on);
@@ -130,21 +136,25 @@ for (const surface of SURFACES) {
   });
 }
 
-test("r re-opens the pane with the rows the other view needs", async ($, on) => {
-  const seen = await withRunners($, on);
-  await $.command.run(RUN);
-  const pane = await paneOf($, "terminal");
-  await pane.press({ key: "view" });
-  // toolbar, hint, summary and limits 4 + the failed devin (head, source,
-  // note) 3 + the live codex (head, source) 2
-  expect(seen.rows.at(-1)).toBe(9);
-  expect(seen.focused.at(-1)).toBe(true);
-  await pane.press({ key: "view" });
-  // toolbar and hint 2 + main's header 1 + codex 2 + ls 3 (head, source,
-  // output) + a1's header 1 + devin 3
-  expect(seen.rows.at(-1)).toBe(12);
-  expect(seen.opened).toEqual(["shell-watch", "shell-watch", "shell-watch"]);
-});
+test(
+  "r re-opens the pane with the rows the other view needs",
+  { options: { scope: "all" } },
+  async ($, on) => {
+    const seen = await withRunners($, on);
+    await $.command.run(RUN);
+    const pane = await paneOf($, "terminal");
+    await pane.press({ key: "view" });
+    // toolbar, hint, summary and limits 4 + the failed devin (head, source,
+    // note) 3 + the live codex (head, source) 2
+    expect(seen.rows.at(-1)).toBe(9);
+    expect(seen.focused.at(-1)).toBe(true);
+    await pane.press({ key: "view" });
+    // toolbar and hint 2 + main's header 1 + codex 2 + ls 3 (head, source,
+    // output) + a1's header 1 + devin 3
+    expect(seen.rows.at(-1)).toBe(12);
+    expect(seen.opened).toEqual(["shell-watch", "shell-watch", "shell-watch"]);
+  },
+);
 
 test("/shell-watch runners | agents | bare: sets the view, opens, bare keeps it", async ($, on) => {
   const seen = await withRunners($, on);

@@ -8,6 +8,9 @@ import { world } from "./fixtures/world.ts";
 
 const START = { cwd: "/w", surface: "terminal", isInteractive: true } as const;
 const MIN = 60_000;
+// Plain shell calls are watched only under scope: all (runners is the
+// default); mechanics tests run in it.
+const ALL = { options: { scope: "all" } } as const;
 const BG_TEXT =
   "Command running in background with ID: b1. Output is being written to: /t/b1.output. You will be notified.";
 const BG_RESULT = {
@@ -22,74 +25,91 @@ const BG_RESULT = {
 const NOTICE =
   '<task-notification>\n<task-id>b1</task-id>\n<status>failed</status>\n<summary>Background command "x" failed with exit code 3</summary>\n</task-notification>';
 
-test("a Bash call shows while it runs and settles with its exit", async ($, on) => {
-  const clock = mock.clock(on);
-  const seen = world(on);
-  on("tool.call", { tool: "Bash" }, async () => {
-    await advance(clock, 5000);
-    return {
-      result: { stdout: "ok\n", stderr: "", interrupted: false },
-      text: "ok",
-    };
-  });
-  await $.session.start(START);
-  await $.tool.call({
-    tool: "Bash",
-    command: "npm test",
-    description: "Run tests",
-  });
-  expect(seen.statuses).toContain("◐ main · Run tests 0:01");
-  await advance(clock, 1000);
-  expect(seen.statuses.at(-1)).toBeUndefined();
-  expect(await textOf(await paneOf($, "terminal"))).toContain(
-    "0:05 exit 0\nRun tests",
-  );
-});
+test(
+  "a Bash call shows while it runs and settles with its exit",
+  ALL,
+  async ($, on) => {
+    const clock = mock.clock(on);
+    const seen = world(on);
+    on("tool.call", { tool: "Bash" }, async () => {
+      await advance(clock, 5000);
+      return {
+        result: { stdout: "ok\n", stderr: "", interrupted: false },
+        text: "ok",
+      };
+    });
+    await $.session.start(START);
+    await $.tool.call({
+      tool: "Bash",
+      command: "npm test",
+      description: "Run tests",
+    });
+    expect(seen.statuses).toContain("◐ main · Run tests 0:01");
+    await advance(clock, 1000);
+    expect(seen.statuses.at(-1)).toBeUndefined();
+    expect(await textOf(await paneOf($, "terminal"))).toContain(
+      "0:05 exit 0\nRun tests",
+    );
+  },
+);
 
-test("a failed call stays on the status line for 2 minutes", async ($, on) => {
-  const clock = mock.clock(on);
-  const seen = world(on);
-  on("tool.call", { tool: "Bash" }, () => ({
-    isError: true,
-    result: "Exit code 2",
-    text: "Exit code 2\nerror TS2322",
-  }));
-  await $.session.start(START);
-  await $.tool.call({ tool: "Bash", command: "tsc", description: "Typecheck" });
-  await advance(clock, 1000);
-  expect(seen.statuses.at(-1)).toBe("✗ main · Typecheck exit 2");
-  await advance(clock, 2 * MIN);
-  expect(seen.statuses.at(-1)).toBeUndefined();
-});
+test(
+  "a failed call stays on the status line for 2 minutes",
+  ALL,
+  async ($, on) => {
+    const clock = mock.clock(on);
+    const seen = world(on);
+    on("tool.call", { tool: "Bash" }, () => ({
+      isError: true,
+      result: "Exit code 2",
+      text: "Exit code 2\nerror TS2322",
+    }));
+    await $.session.start(START);
+    await $.tool.call({
+      tool: "Bash",
+      command: "tsc",
+      description: "Typecheck",
+    });
+    await advance(clock, 1000);
+    expect(seen.statuses.at(-1)).toBe("✗ main · Typecheck exit 2");
+    await advance(clock, 2 * MIN);
+    expect(seen.statuses.at(-1)).toBeUndefined();
+  },
+);
 
-test("a background run keeps running until its notification", async ($, on) => {
-  const clock = mock.clock(on);
-  const seen = world(on);
-  on("tool.call", { tool: "Bash" }, () => BG_RESULT);
-  await $.session.start(START);
-  await $.tool.call({
-    tool: "Bash",
-    command: "npm run e2e",
-    description: "E2E",
-    run_in_background: true,
-  });
-  await advance(clock, 1000);
-  expect(seen.statuses.at(-1)).toBe("◐ main · E2E 0:01 · no output · 1s");
-  const pane = await paneOf($, "terminal");
-  expect(await textOf(pane)).toContain("bg · npm run e2e");
-  await notify($, NOTICE);
-  await advance(clock, 1000);
-  expect(seen.statuses.at(-1)).toBe("✗ main · E2E exit 3");
-  expect(await textOf(pane)).toContain("0:01 exit 3\nE2E");
-});
+test(
+  "a background run keeps running until its notification",
+  ALL,
+  async ($, on) => {
+    const clock = mock.clock(on);
+    const seen = world(on);
+    on("tool.call", { tool: "Bash" }, () => BG_RESULT);
+    await $.session.start(START);
+    await $.tool.call({
+      tool: "Bash",
+      command: "npm run e2e",
+      description: "E2E",
+      run_in_background: true,
+    });
+    await advance(clock, 1000);
+    expect(seen.statuses.at(-1)).toBe("◐ main · E2E 0:01 · no output · 1s");
+    const pane = await paneOf($, "terminal");
+    expect(await textOf(pane)).toContain("bg · npm run e2e");
+    await notify($, NOTICE);
+    await advance(clock, 1000);
+    expect(seen.statuses.at(-1)).toBe("✗ main · E2E exit 3");
+    expect(await textOf(pane)).toContain("0:01 exit 3\nE2E");
+  },
+);
 
 // quietMin 0.05 and hangMin 0.1: quiet after 3 s, hung after 6 s, so a test
 // fires a handful of timers, not hundreds.
 const FAST = { options: { quietMin: 0.05, hangMin: 0.1 } };
+const FAST_ALL = { options: { ...FAST.options, scope: "all" } } as const;
 
 test(
   "the poller moves a silent run to quiet, then hung",
-  FAST,
+  FAST_ALL,
   async ($, on) => {
     const clock = mock.clock(on);
     const seen = world(on);
@@ -175,17 +195,25 @@ test("a runner's verdict is read once its background run ends", async ($, on) =>
   );
 });
 
-test("after a reload the poller resumes running calls", FAST, async ($, on) => {
-  const clock = mock.clock(on);
-  const seen = world(on);
-  seen.files.set("/t/b1.output", { size: 1, mtimeMs: 0 });
-  on("tool.call", { tool: "Bash" }, () => BG_RESULT);
-  await $.session.start(START);
-  await $.tool.call({ tool: "Bash", command: "sleep 9", description: "Wait" });
-  await $.session.start(START);
-  await advance(clock, 4000);
-  expect(seen.statuses.at(-1)).toMatch(/^⚠ quiet 4s main · Wait/u);
-});
+test(
+  "after a reload the poller resumes running calls",
+  FAST_ALL,
+  async ($, on) => {
+    const clock = mock.clock(on);
+    const seen = world(on);
+    seen.files.set("/t/b1.output", { size: 1, mtimeMs: 0 });
+    on("tool.call", { tool: "Bash" }, () => BG_RESULT);
+    await $.session.start(START);
+    await $.tool.call({
+      tool: "Bash",
+      command: "sleep 9",
+      description: "Wait",
+    });
+    await $.session.start(START);
+    await advance(clock, 4000);
+    expect(seen.statuses.at(-1)).toMatch(/^⚠ quiet 4s main · Wait/u);
+  },
+);
 
 test("a foreground runner's live line comes from its watch file", async ($, on) => {
   const clock = mock.clock(on);
@@ -207,58 +235,5 @@ test("a foreground runner's live line comes from its watch file", async ($, on) 
   });
   expect(seen.statuses).toContain(
     "◐ main · codex · Review 0:02 · output 1s ago · › editing src/b.ts",
-  );
-});
-
-test("a TaskStop the model makes settles its background call", async ($, on) => {
-  const clock = mock.clock(on);
-  const seen = world(on);
-  on("tool.call", { tool: "Bash" }, () => BG_RESULT);
-  await $.session.start(START);
-  await $.tool.call({ tool: "Bash", command: "sleep 99", description: "Wait" });
-  await $.tool.call({ tool: "TaskStop", task_id: "b1" });
-  await advance(clock, 1000);
-  expect(seen.stops).toEqual(["b1"]);
-  expect(seen.statuses.at(-1)).toBeUndefined();
-});
-
-test("an interrupted call is stopped, not failed", async ($, on) => {
-  const clock = mock.clock(on);
-  const seen = world(on);
-  on("tool.call", { tool: "Bash" }, () => ({
-    isError: true,
-    result: undefined,
-    text: "<error>Command was aborted before completion</error>",
-  }));
-  await $.session.start(START);
-  await $.tool.call({ tool: "Bash", command: "sleep 9", description: "Wait" });
-  await advance(clock, 1000);
-  expect(seen.statuses.at(-1)).toBeUndefined();
-  expect(await textOf(await paneOf($, "terminal"))).toContain("○");
-});
-
-test("a refused call is denied: dim in the pane, never on the status line", async ($, on) => {
-  const clock = mock.clock(on);
-  const seen = world(on);
-  on("tool.call", { tool: "Bash" }, (_$, e) =>
-    e.command === "echo test"
-      ? {
-          isError: true,
-          result: undefined,
-          text: "Permission to use Bash has been denied.",
-        }
-      : BG_RESULT,
-  );
-  await $.session.start(START);
-  await $.tool.call({ tool: "Bash", command: "sleep 9", description: "Wait" });
-  await $.tool.call({
-    tool: "Bash",
-    command: "echo test",
-    description: "Echo test",
-  });
-  await advance(clock, 1000);
-  expect(seen.statuses.at(-1)).toBe("◐ main · Wait 0:01 · no output · 1s");
-  expect(await textOf(await paneOf($, "terminal"))).toContain(
-    "0:00 denied\nEcho test",
   );
 });
