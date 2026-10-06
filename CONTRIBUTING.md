@@ -35,10 +35,7 @@ unit tests cannot: that the hooks module loads in the engine and registers its
 command (`/shell-watch clear` answers), and that a plain Bash turn goes through
 untouched with the mod on. It costs about $0.07 and half a minute.
 
-Locally it needs your Claude login or an API key. In CI the `eval` job runs it
-when the repository has the secret `ANTHROPIC_API_KEY`; without the secret
-(a fork, a Dependabot run, no key yet) the job skips its steps and stays green,
-so until someone adds the key this is a local step, not an automatic check.
+It runs on your own Claude login, locally; CI does not run it.
 
 It cannot see the status line, the pane or a background runner's verdict (a
 headless session draws none). `npm run smoke:live` does: it starts a real

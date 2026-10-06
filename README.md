@@ -240,6 +240,8 @@ history before 0.2.0 comes from
 [agent-mods](https://github.com/apolenkov/agent-mods). Questions:
 [SUPPORT.md](SUPPORT.md).
 
+Live checks run locally: `npm run eval` (headless, on your Claude login; not in CI).
+
 ## License
 
 [MIT](LICENSE). `engine-types/claude-code.d.ts` is © Anthropic PBC and not
