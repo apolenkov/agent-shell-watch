@@ -2,8 +2,15 @@
  * Bash calls rebuilt from the transcript, for calls made before the mod
  * loaded (enabled mid-session, a hot reload, an update).
  */
-import type { ShellCall } from "../../types";
-import { isLive, noticed, settled, started, trimmed } from "./calls.ts";
+import type { ShellCall, ShellScope } from "../../types";
+import {
+  isInScope,
+  isLive,
+  noticed,
+  settled,
+  started,
+  trimmed,
+} from "./calls.ts";
 import { outcomeOf } from "./outcome.ts";
 import { noticesOf, type TaskNotice } from "./parse.ts";
 
@@ -109,10 +116,12 @@ const reconciled = (known: ShellCall, rebuilt: ShellCall): ShellCall =>
       }
     : known;
 
-/** How many calls to keep, and which ids never to bring back. */
+/** How many calls to keep, which ids never to bring back, and the scope. */
 export interface Keep {
   readonly max: number;
   readonly cleared: readonly string[];
+  /** The watch scope; absent means `all`. */
+  readonly scope?: ShellScope;
 }
 
 /**
@@ -136,7 +145,9 @@ export const merged = (
   const rebuiltIds = new Set(rebuilt.map((call) => call.id));
   const ordered = [
     ...rebuilt
-      .filter((call) => !gone.has(call.id))
+      .filter(
+        (call) => !gone.has(call.id) && isInScope(call, keep.scope ?? "all"),
+      )
       .map((call) => {
         const own = byId.get(call.id);
         return own === undefined ? call : reconciled(own, call);

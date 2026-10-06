@@ -56,6 +56,16 @@
       "title": "Status line",
       "description": "Show the always-on status line while anything runs or just failed",
       "default": true
+    },
+    "scope": {
+      "type": "string",
+      "title": "Watch scope",
+      "description": "runners watches only delegated agent runs (Codex, Pi, Devin, ocr and guard-wrapped --watch-file runs); all adds every Bash call and background task",
+      "options": [
+        "runners",
+        "all"
+      ],
+      "default": "runners"
     }
   }
 }

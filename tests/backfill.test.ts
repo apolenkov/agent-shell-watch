@@ -7,6 +7,8 @@ import { textOf } from "./fixtures/text-of.ts";
 import { world } from "./fixtures/world.ts";
 
 const START = { cwd: "/w", surface: "terminal", isInteractive: true } as const;
+// The transcripts hold plain calls; the default runners scope would skip them.
+const ALL = { options: { scope: "all" } } as const;
 const RUN = {
   command: "shell-watch",
   args: "",
@@ -75,73 +77,101 @@ const AGENTS = [
   },
 ];
 
-test("calls made before the mod loaded are rebuilt once, reload or not", async ($, on) => {
+test(
+  "calls made before the mod loaded are rebuilt once, reload or not",
+  ALL,
+  async ($, on) => {
+    mock.clock(on);
+    const seen = world(on, {}, AGENTS);
+    seen.transcripts.set("", MAIN);
+    seen.transcripts.set("a1", RUNNER);
+    seen.transcripts.set("a2", [
+      { role: "assistant", text: "", toolUses: [bg("o1", "b9", "Never")] },
+    ]);
+    await $.session.start(START);
+    await $.session.start(START);
+    const pane = await paneOf($, "terminal");
+    const text = await textOf(pane);
+    expect(text).toContain("— exit 0\nE2E");
+    expect(text).toContain("— no output\nWait");
+    expect(text).toContain("— DONE 0\npi · list mods");
+    expect(text).toContain("pi-runner: List mods");
+    expect(text).not.toContain("Never");
+    const buttons = await pane.findAll({ type: "Button" });
+    const rows = buttons.filter(
+      (button) => button.key?.startsWith("row:") === true,
+    );
+    expect(rows).toHaveLength(3);
+  },
+);
+
+test("the default scope rebuilds only the transcript's agent runs", async ($, on) => {
   mock.clock(on);
   const seen = world(on, {}, AGENTS);
   seen.transcripts.set("", MAIN);
   seen.transcripts.set("a1", RUNNER);
-  seen.transcripts.set("a2", [
-    { role: "assistant", text: "", toolUses: [bg("o1", "b9", "Never")] },
-  ]);
   await $.session.start(START);
-  await $.session.start(START);
-  const pane = await paneOf($, "terminal");
-  const text = await textOf(pane);
-  expect(text).toContain("— exit 0\nE2E");
-  expect(text).toContain("— no output\nWait");
-  expect(text).toContain("— DONE 0\npi · list mods");
-  expect(text).toContain("pi-runner: List mods");
-  expect(text).not.toContain("Never");
-  const buttons = await pane.findAll({ type: "Button" });
-  const rows = buttons.filter(
-    (button) => button.key?.startsWith("row:") === true,
-  );
-  expect(rows).toHaveLength(3);
-});
-
-test("opening the pane picks up what the transcript gained", async ($, on) => {
-  mock.clock(on);
-  const seen = world(on);
-  await $.session.start(START);
-  seen.transcripts.set("", MAIN);
-  await $.command.run(RUN);
-  expect(await textOf(await paneOf($, "terminal"))).toContain("Wait");
-});
-
-test("cleared calls stay cleared when the pane opens again", async ($, on) => {
-  mock.clock(on);
-  const seen = world(on);
-  seen.transcripts.set("", MAIN);
-  await $.session.start(START);
-  await $.command.run({ ...RUN, args: "clear" });
-  await $.command.run(RUN);
   const text = await textOf(await paneOf($, "terminal"));
+  expect(text).toContain("pi · list mods");
   expect(text).not.toContain("E2E");
-  expect(text).toContain("Wait");
+  expect(text).not.toContain("Wait");
 });
 
-test("a hung call of a finished agent is closed by the transcript", async ($, on) => {
-  const clock = mock.clock(on);
-  const agents = [{ ...AGENTS[0], id: "a3" }] as AgentInfo[];
-  const seen = world(on, {}, agents);
-  const grep = {
-    role: "assistant",
-    text: "",
-    toolUses: [bg("o1", "b9", "Grep")],
-  };
-  seen.transcripts.set("a3", [grep]);
-  await $.session.start(START);
-  await advance(clock, 11 * 60_000);
-  expect(seen.statuses.at(-1)).toContain("hung");
-  agents[0] = { ...AGENTS[1], id: "a3" } as AgentInfo;
-  seen.transcripts.set("a3", [
-    grep,
-    {
-      role: "user",
-      text: '<task-notification><task-id>b9</task-id><status>completed</status><summary>Background command "x" completed (exit code 0)</summary></task-notification>',
-      toolUses: [],
-    },
-  ]);
-  await advance(clock, 40_000);
-  expect(seen.statuses.at(-1)).not.toContain("hung");
-});
+test(
+  "opening the pane picks up what the transcript gained",
+  ALL,
+  async ($, on) => {
+    mock.clock(on);
+    const seen = world(on);
+    await $.session.start(START);
+    seen.transcripts.set("", MAIN);
+    await $.command.run(RUN);
+    expect(await textOf(await paneOf($, "terminal"))).toContain("Wait");
+  },
+);
+
+test(
+  "cleared calls stay cleared when the pane opens again",
+  ALL,
+  async ($, on) => {
+    mock.clock(on);
+    const seen = world(on);
+    seen.transcripts.set("", MAIN);
+    await $.session.start(START);
+    await $.command.run({ ...RUN, args: "clear" });
+    await $.command.run(RUN);
+    const text = await textOf(await paneOf($, "terminal"));
+    expect(text).not.toContain("E2E");
+    expect(text).toContain("Wait");
+  },
+);
+
+test(
+  "a hung call of a finished agent is closed by the transcript",
+  ALL,
+  async ($, on) => {
+    const clock = mock.clock(on);
+    const agents = [{ ...AGENTS[0], id: "a3" }] as AgentInfo[];
+    const seen = world(on, {}, agents);
+    const grep = {
+      role: "assistant",
+      text: "",
+      toolUses: [bg("o1", "b9", "Grep")],
+    };
+    seen.transcripts.set("a3", [grep]);
+    await $.session.start(START);
+    await advance(clock, 11 * 60_000);
+    expect(seen.statuses.at(-1)).toContain("hung");
+    agents[0] = { ...AGENTS[1], id: "a3" } as AgentInfo;
+    seen.transcripts.set("a3", [
+      grep,
+      {
+        role: "user",
+        text: '<task-notification><task-id>b9</task-id><status>completed</status><summary>Background command "x" completed (exit code 0)</summary></task-notification>',
+        toolUses: [],
+      },
+    ]);
+    await advance(clock, 40_000);
+    expect(seen.statuses.at(-1)).not.toContain("hung");
+  },
+);

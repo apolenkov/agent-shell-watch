@@ -38,4 +38,5 @@ export const configOf = (options: PluginOptions): Config => ({
     hangMs: positive(options, "hangMin") * MINUTE,
   },
   statusLine: options["statusLine"] !== false,
+  scope: options["scope"] === "all" ? "all" : "runners",
 });

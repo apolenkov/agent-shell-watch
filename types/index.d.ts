@@ -15,6 +15,12 @@ export type ShellStatus =
 /** An external agent CLI a Bash call runs. */
 export type ShellRunner = "codex" | "pi" | "devin" | "ocr";
 
+/**
+ * What the mod watches: only delegated agent runs (`runners`), or every Bash
+ * call and background task (`all`).
+ */
+export type ShellScope = "runners" | "all";
+
 /** What the pane lists: every call by agent, or only the external runners. */
 export type ShellView = "agents" | "runners";
 
@@ -81,6 +87,7 @@ export interface ShellConfig {
   readonly maxCalls: number;
   readonly limits: { readonly quietMs: number; readonly hangMs: number };
   readonly statusLine: boolean;
+  readonly scope: ShellScope;
 }
 
 /** What `$.agent.list()` said of one subagent. */

@@ -17,10 +17,10 @@ and repeatable.</sub>
 [![Claude Code ≥ 2.1.287](https://img.shields.io/badge/Claude%20Code-%E2%89%A5%202.1.287-0A7468)](https://claude.com/claude-code)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/apolenkov/agent-shell-watch/badge)](https://scorecard.dev/viewer/?uri=github.com/apolenkov/agent-shell-watch)
 
-A [Claude Code](https://claude.com/claude-code) mod that watches this
-session's Bash calls (main loop and every subagent), background tasks and,
-above all, the agent runs you delegate through the shell: Codex, Pi, Devin and
-OpenCodeReview (`ocr`).
+A [Claude Code](https://claude.com/claude-code) mod that watches the agent
+runs you delegate through the shell — Codex, Pi, Devin and OpenCodeReview
+(`ocr`) — live in the status line and a pane. `scope: all` widens the watch to
+every Bash call and background task of the session.
 
 ## Why
 
@@ -36,7 +36,7 @@ output fresh, nothing failed.
 
 ## Features
 
-- 📟 **Status line** while anything runs, or a call failed in the last
+- 📟 **Status line** while a run is live, or one failed in the last
   2 minutes: the most urgent call leads, the rest are counted.
 - 🪟 **`/shell-watch` pane**, grouped by who made the calls (`main` and each
   subagent), with every call's state, command and last output line.
@@ -72,19 +72,18 @@ Requirements: Claude Code 2.1.287 or later (mods are on by default), and
 
 ### Status line
 
-Shown while anything runs, or a call failed in the last 2 minutes. The most
-urgent call leads (hung, failed, quiet, running; a runner before a plain
-shell), the rest are counted as `+N hung`, `+N failed`, `+N quiet`, `+N bg`,
-`+N running`. The leading call says whose it is: `main` or the subagent's
-type. Claude Code labels the line with the plugin's name:
+Shown while an agent run is live, or one failed in the last 2 minutes (`scope:
+all` counts every Bash call the same way). The most urgent call leads (hung,
+failed, quiet, running; a runner before a plain shell), the rest are counted
+as `+N hung`, `+N failed`, `+N quiet`, `+N bg`, `+N running`. The leading call
+says whose it is: `main` or the subagent's type. Claude Code labels the line
+with the plugin's name:
 
 ```
 agent-shell-watch: ◐ main · codex · Review diff 2:13 · output 4s ago · › applying patch src/a.ts · +1 bg
 agent-shell-watch: ⚠ quiet 6m pi-runner · pi · Fix flaky test 7:40 · +2 running
-agent-shell-watch: ◐ main · Wait 0:45 · no output · 45s
-agent-shell-watch: ⚠ hung 12m main · Wait loop · +1 failed
-agent-shell-watch: ✗ main · Typecheck exit 2 · +1 bg
 agent-shell-watch: ✗ general-purpose · devin · Review spec RATE_LIMIT 1790000000
+agent-shell-watch: ⚠ hung 12m main · Wait loop · +1 failed        (scope: all)
 ```
 
 ### The pane
@@ -189,28 +188,29 @@ A runner's outcome is its guard verdict (`DONE n`, `RATE_LIMIT epoch`,
 
 Set in `/config`.
 
-| Option        | Default | Meaning                                                   |
-| ------------- | ------- | --------------------------------------------------------- |
-| `columns`     | 52      | Width asked for the docked pane                           |
-| `openOnStart` | false   | Open the pane at start until you have opened or closed it |
-| `maxCalls`    | 50      | Calls kept, the oldest finished dropped first             |
-| `quietMin`    | 5       | Minutes without new output before a running call is quiet |
-| `hangMin`     | 10      | Minutes without new output before a running call is hung  |
-| `statusLine`  | true    | Show the status line                                      |
+| Option        | Default | Meaning                                                                                                                                                        |
+| ------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `columns`     | 52      | Width asked for the docked pane                                                                                                                                |
+| `openOnStart` | false   | Open the pane at start until you have opened or closed it                                                                                                      |
+| `maxCalls`    | 50      | Calls kept, the oldest finished dropped first                                                                                                                  |
+| `quietMin`    | 5       | Minutes without new output before a running call is quiet                                                                                                      |
+| `hangMin`     | 10      | Minutes without new output before a running call is hung                                                                                                       |
+| `statusLine`  | true    | Show the status line                                                                                                                                           |
+| `scope`       | runners | `runners`: only delegated agent runs (Codex, Pi, Devin, `ocr`, and any `agent-runner-guard --watch-file` call). `all`: every Bash call and background task too |
 
 <details>
 <summary><b>How it works</b></summary>
 
-| Event / timer             | What agent-shell-watch does                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------- |
-| `session.start`           | Registers `/shell-watch`, rebuilds calls made before the mod loaded, starts the tick and poll |
-| `tool.call` (Bash)        | Records the call (label from the input `description`), awaits it, records exit and output     |
-| `session.append`          | A `<task-notification>` row settles its background call (status, exit code)                   |
-| tick, every 1 s           | Advances elapsed time and redraws the status line                                             |
-| poll, every 2 s           | `fs.stat` of the watch or output file → freshness, quiet, hung; `tail -n 40` for runner rows  |
-| `ui.render` (Pane)        | Draws the pane; the selected row's tail is read once when it is selected                      |
-| `ui.open`                 | Rebuilds missed calls from `$.session.messages()` (main loop and running agents)              |
-| `ui.close`, `command.run` | Opens and closes the pane; the choice is kept in `$.store` for the next session               |
+| Event / timer             | What agent-shell-watch does                                                                                                                                                       |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `session.start`           | Registers `/shell-watch`, rebuilds calls made before the mod loaded, starts the tick and poll                                                                                     |
+| `tool.call` (Bash)        | Records the call (label from the input `description`; under `scope: runners` only an agent run — a runner or a `--watch-file` call — is kept), awaits it, records exit and output |
+| `session.append`          | A `<task-notification>` row settles its background call (status, exit code)                                                                                                       |
+| tick, every 1 s           | Advances elapsed time and redraws the status line                                                                                                                                 |
+| poll, every 2 s           | `fs.stat` of the watch or output file → freshness, quiet, hung; `tail -n 40` for runner rows                                                                                      |
+| `ui.render` (Pane)        | Draws the pane; the selected row's tail is read once when it is selected                                                                                                          |
+| `ui.open`                 | Rebuilds missed calls from `$.session.messages()` (main loop and running agents)                                                                                                  |
+| `ui.close`, `command.run` | Opens and closes the pane; the choice is kept in `$.store` for the next session                                                                                                   |
 
 A runner is a command whose executable (past `NAME=value` and `cd … &&`,
 after a guard's `--`, or inside `bash -c '…'` / `sh -c "…"`) is `codex`,
