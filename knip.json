@@ -3,6 +3,7 @@
   "entry": [
     "hooks/register.{ts,tsx}",
     "tests/**/*.test.{ts,tsx}",
+    "tests/night-fix/**/*.ts",
     "eslint/suppression-guard.ts"
   ],
   "project": ["{hooks,tests}/**/*.{ts,tsx}", "eslint/**/*.ts", "*.config.ts"],
