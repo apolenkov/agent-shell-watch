@@ -68,15 +68,6 @@ It is also listed, with its sibling mods, in the
 Requirements: Claude Code 2.1.287 or later (mods are on by default), and
 `tail` on `PATH`.
 
-> [!NOTE]
-> **Renamed from shell-flow.** Up to 0.2.x this mod was **shell-flow**
-> (`/shell-flow`, installed as `shell-flow@claude-shell-flow` or
-> `shell-flow@claude-mods`). It is now **agent-shell-watch** and its command
-> is **`/shell-watch`** (`clear` and `stop` as before). The plugin's name
-> changed, so an old install does not update itself: uninstall `shell-flow`
-> and install `agent-shell-watch` as above. Its remembered pane state starts
-> afresh.
-
 ## Usage
 
 ### Status line

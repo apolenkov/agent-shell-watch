@@ -130,6 +130,14 @@ spend() {
     | sed -n 's/^spend: //p' | jq -sc 'if length == 0 then "no data" else "\(map(.tokens // 0) | add) tokens, cost \(map(.cost // 0) | add)" end' | tr -d '"'
 }
 
+# A merged night-fix PR can leave its branch behind (PR #45 did, although the repository deletes head
+# branches on merge): delete the night-fix/* branches that have a PR, none of them open.
+for b in $(gh api --paginate "repos/$REPO/git/matching-refs/heads/night-fix/" --jq '.[].ref | ltrimstr("refs/heads/")'); do
+  [ "$(gh api -X GET "repos/$REPO/pulls" -f state=all -f head="${REPO%%/*}:$b" --jq length)" -gt 0 ] || continue
+  [ "$(gh api -X GET "repos/$REPO/pulls" -f state=open -f head="${REPO%%/*}:$b" --jq length)" -eq 0 ] || continue
+  gh api -X DELETE "repos/$REPO/git/refs/heads/$b" --silent && echo "deleted the stale branch $b" || true
+done
+
 for id in $IDS; do
   [[ $id =~ ^[0-9a-f]{12}$ ]] || continue
   dir="$work/results/night-$id"

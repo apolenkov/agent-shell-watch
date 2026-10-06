@@ -289,4 +289,6 @@ schedule; it is run by hand after each Dependabot PR and before every rollout st
 - Run `autofix-report.sh` on a schedule and open an issue on the first incident.
 - Retry of a job GitHub never started: not added; the one measured case was a GitHub incident, where a
   retry cannot help. Revisit if such losses appear outside an incident.
-- One shared copy of `PROTECTED` and of the opencode pin instead of one per workflow and repository.
+- One shared copy of `PROTECTED` instead of one per workflow and repository. The opencode and OCR pins
+  are now checked and moved from one place: `scripts/factory-pins.sh` (report, exit 1 on drift;
+  `--update` opens one PR per repository); Dependabot cannot see them. The report is run by hand.
