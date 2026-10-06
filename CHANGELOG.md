@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.7.0](https://github.com/apolenkov/agent-shell-watch/compare/v0.6.0...v0.7.0) (2026-10-06)
+
+
+### Features
+
+* **agent-shell-watch:** watch only delegated agent runs by default ([#81](https://github.com/apolenkov/agent-shell-watch/issues/81)) ([f1e002c](https://github.com/apolenkov/agent-shell-watch/commit/f1e002c964b4ea63576d21b89e256919ec25e5d4))
+
+
+### Bug Fixes
+
+* **agent-shell-watch:** close issues and delete the branch after a bot merge ([#84](https://github.com/apolenkov/agent-shell-watch/issues/84)) ([adf5b83](https://github.com/apolenkov/agent-shell-watch/commit/adf5b83ac2b45401ed5f30c1b9b5a09e2f83fdc5))
+* **agent-shell-watch:** fix confirmed night finding in scripts/autofix-report.sh ([#80](https://github.com/apolenkov/agent-shell-watch/issues/80)) ([9ecd32a](https://github.com/apolenkov/agent-shell-watch/commit/9ecd32ac7af794bdc9b2d0c9fc925e1424b7cc00))
+* **agent-shell-watch:** harden update-types.sh /tmp source selection ([#82](https://github.com/apolenkov/agent-shell-watch/issues/82)) ([19048c3](https://github.com/apolenkov/agent-shell-watch/commit/19048c3fedaf1f8318abfa0b5ba0a8d06681aa82)), closes [#62](https://github.com/apolenkov/agent-shell-watch/issues/62)
+
 ## [0.6.0](https://github.com/apolenkov/agent-shell-watch/compare/v0.5.5...v0.6.0) (2026-10-05)
 
 
