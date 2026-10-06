@@ -4,6 +4,11 @@
 #   repro  normalizes the agent's verdict.json; for `confirmed` runs the reproduction
 #          test, which must FAIL on an assertion (not on a syntax or import error)
 #   fixed  after the fixer: the reproduction test must pass, then the whole `npm run check`
+# The reproduction is ONE file under tests/night-fix/<id>/, by what the defect lives in:
+#   repro.test.ts  plugin code, run by `claude plugin test` (its module sandbox allows
+#                  only relative imports and "claude-code")
+#   repro.node.ts  anything else (shell scripts, workflows, node builtins), run by
+#                  `node --test` (node:test + node:assert/strict, TAP output)
 # The test code is the agent's, so it runs in a copy of the tree and the workspace
 # stays clean for the patch. Writes verdict.json {id,status,evidence,lines,reason}
 # and repro.log, and the step output `status`.
@@ -26,14 +31,20 @@ verdict() {
   echo "verdict: $1 ($2)"
 }
 
-# copy_tree slim|full : the workspace without .git and node_modules (linked).
+# copy_tree slim|full : the workspace without .git and node_modules (linked). `full`
+# also drops the files of this run (verdicts, logs, the patch): `npm run check` must
+# see the tree the PR will contain, not the runner's workspace — prettier flags them.
 copy_tree() {
   local dst
   dst=$(mktemp -d)
   if [ "$1" = slim ]; then
     rsync -a --exclude .git --exclude node_modules --include "$test_dir/***" --exclude '*.test.ts' --exclude '*.test.tsx' ./ "$dst/"
   else
-    rsync -a --exclude .git --exclude node_modules ./ "$dst/"
+    rsync -a --exclude .git --exclude node_modules \
+      --exclude 'verdict*.json' --exclude 'finding.json' --exclude 'repro.log' \
+      --exclude 'repro.full.log' --exclude 'fixed-tests.log' --exclude 'fix.patch' \
+      --exclude 'agent-*.jsonl' --exclude 'agent-*.txt' --exclude '*-body.md' \
+      ./ "$dst/"
   fi
   ln -s "$PWD/node_modules" "$dst/node_modules"
   echo "$dst"
@@ -42,7 +53,12 @@ copy_tree() {
 run_repro() {
   local dst rc=0
   dst=$(copy_tree slim)
-  (cd "$dst" && timeout 5m npx claude plugin test . 2>&1) > repro.full.log || rc=$?
+  if [ -f "$dst/$test_dir/repro.node.ts" ]; then
+    # TAP on purpose: "not ok" is the failure mark whatever the default reporter is.
+    (cd "$dst" && timeout 5m node --test --test-reporter=tap "$test_dir/repro.node.ts" 2>&1) > repro.full.log || rc=$?
+  else
+    (cd "$dst" && timeout 5m npx claude plugin test . 2>&1) > repro.full.log || rc=$?
+  fi
   tail -n 400 repro.full.log | cut -c1-400 > repro.log
   rm -f repro.full.log
   return "$rc"
@@ -62,12 +78,13 @@ if [ "$mode" = repro ]; then
       fi ;;
     refuted | needs-human) verdict "$status" "the agent's verdict" "$evidence" ;;
     confirmed)
-      [ -f "$test_dir/repro.test.ts" ] || { verdict needs-human "confirmed without a reproduction test" "$evidence"; exit 0; }
+      [ -f "$test_dir/repro.test.ts" ] || [ -f "$test_dir/repro.node.ts" ] \
+        || { verdict needs-human "confirmed without a reproduction test" "$evidence"; exit 0; }
       rc=0
       run_repro || rc=$?
-      # A real failure: non-zero exit, a failed test (not "the file did not load")
-      # and an assertion error in the output.
-      if [ "$rc" -ne 0 ] && grep -E '^\(fail\) ' repro.log | grep -qv 'the file did not load' && grep -q 'AssertionError' repro.log; then
+      # A real failure: non-zero exit, a failed test ("(fail)" of the plugin runner or
+      # "not ok" of node --test; not "the file did not load") and an assertion error.
+      if [ "$rc" -ne 0 ] && grep -E '^\(fail\) |^not ok ' repro.log | grep -qv 'the file did not load' && grep -q 'AssertionError' repro.log; then
         verdict confirmed "the reproduction test fails on current main" "$evidence
 --- repro.log (tail)
 $(tail -n 40 repro.log)"

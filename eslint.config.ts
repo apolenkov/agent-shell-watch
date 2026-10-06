@@ -46,6 +46,9 @@ const eslintConfig: Linter.Config[] = defineConfig(
     "coverage/**",
     "engine-types/**",
     ".claude-plugin/types/**",
+    // Written by the night-fix bot: reproductions are kept as evidence and run
+    // by node --test or the plugin runner, they do not meet the repo lint bar.
+    "tests/night-fix/**",
   ]),
   { linterOptions: { reportUnusedDisableDirectives: "error" } },
   js.configs.recommended,
