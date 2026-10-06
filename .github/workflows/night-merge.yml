@@ -1,0 +1,37 @@
+name: night-merge
+
+# A night-fix PR merges via auto-merge as github-actions[bot]. For a bot merge
+# GitHub does NOT run the usual aftermath: linked "Fixes #" issues stay open
+# and the head branch is not deleted (issue #63 and night-fix/9ccf47e22f2f of
+# PR #80 were both left behind). This workflow finishes that bookkeeping the
+# moment such a PR is merged: the script runs from the BASE tree.
+on:
+  pull_request:
+    types: [closed]
+
+permissions: {}
+
+jobs:
+  sweep:
+    if: >-
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'night-fix/') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      # The base tree, never the PR head: the head is agent-written code.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+      - run: bash .github/scripts/night-merge.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_MERGED: ${{ github.event.pull_request.merged }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          REPO: ${{ github.repository }}
