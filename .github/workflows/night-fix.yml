@@ -43,8 +43,9 @@ env:
   # COPY of SCAN_TOKEN_BUDGET in night-review.yml: a scan that used 90% of it may be
   # cut short, and then no issue is closed for a missing finding.
   SCAN_TOKEN_BUDGET: "6000000"
-  # Paths the agent must never change. COPY of the list in ci-autofix.yml: keep both
-  # in step. Bash globs; also opencode `edit` deny rules in the work job.
+  # Paths the agent must never change. COPY of the list in ci-autofix.yml except `tests/*`:
+  # here the verifier writes a test and the guard of act.sh limits tests/ to the new file, while
+  # the fixer's edit rules below deny all of tests/. Bash globs; also opencode `edit` deny rules in the work job.
   PROTECTED: |
     .github/*
     */.github/*

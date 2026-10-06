@@ -1,0 +1,29 @@
+name: factory-watch
+
+# Daily: autofix-report.sh over every repository that runs the factory; an incident or a suspect
+# becomes one issue here (scripts/factory-watch.sh). It only reads the other repositories (public)
+# and writes issues in this one. Decision record: docs/adr/0001-night-factory-autonomy.md.
+on:
+  schedule:
+    - cron: "41 5 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: scripts/factory-watch.sh

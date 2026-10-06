@@ -86,7 +86,7 @@ replace_once "$a" '[ "$failed" = check ] || { echo "failed jobs: $failed; only c
 if [ -n "$PROTECTED_EXTRA" ]; then
   extra=''
   for g in $PROTECTED_EXTRA; do extra="$extra    $g"$'\n'; done
-  replace_once "$a" 'tests/night-fix/*' "tests/night-fix/*
+  replace_once "$a" 'tests/*' "tests/*
 ${extra%$'\n'}"
 fi
 replace_once "$n" 'workflows: [ci]' "workflows: [$CI_NAME]"
