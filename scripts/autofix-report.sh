@@ -89,9 +89,9 @@ is_protected() {
 }
 
 # Dependabot's PRs, the bot's own (night-fix) and the owner's opt-in ones (autofix), once each.
-list_prs() { gh pr list -R "$REPO" --state all --limit 200 "$@" --json number,title,state,createdAt,author,labels,body; }
+list_prs() { gh pr list -R "$REPO" --state all --limit 200 "$@" --json number,title,state,createdAt,mergedAt,author,labels,body; }
 prs=$({ list_prs --author app/dependabot; list_prs --label night-fix; list_prs --label autofix; } | jq -s --arg since "$SINCE" '
-  add | unique_by(.number) | map(select(.createdAt >= $since))
+  add | unique_by(.number) | map(select((.mergedAt // .createdAt) >= $since))
   | map(. + {kind: (if (.author.login | test("dependabot")) then "dependabot"
                     elif ([.labels[].name] | index("night-fix")) then "night-fix" else "owner-autofix" end)})')
 
