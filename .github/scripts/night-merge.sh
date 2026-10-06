@@ -15,10 +15,12 @@ case "${PR_HEAD_REF:-}" in
 esac
 
 # Close the issues the PR links as fixed. A human merge has already closed
-# them, so a closed issue is noted, never re-closed.
+# them, so a closed issue is noted, never re-closed. The clause matches the
+# GitHub cascade: a left word boundary (no "postfix"), then any number of
+# "#N" refs chained by spaces, commas or "and" — and only "#N" is counted.
 for n in $(printf '%s\n' "${PR_BODY:-}" \
-  | grep -oiE '(close[sd]?|fix(e[sd])?|resolve[sd]?) +#[0-9]+' \
-  | grep -oE '[0-9]+' | sort -u); do
+  | grep -oiE '(^|[^a-z])(close[sd]?|fix(e[sd])?|resolve[sd]?)(([^a-z#]|and)*#[0-9]+)+' \
+  | grep -oE '#[0-9]+' | tr -d '#' | sort -u); do
   state=$(gh issue view "$n" -R "$REPO" --json state --jq .state 2> /dev/null || echo "?")
   case "$state" in
     OPEN)

@@ -6,8 +6,10 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -36,8 +38,8 @@ interface Rig {
 }
 
 function rig(t: test.TestContext): Rig {
-  const dir = mkdtempSync(join("/tmp", "night-merge-"));
-  t.after(() => spawnSync("rm", ["-rf", dir]));
+  const dir = mkdtempSync(join(tmpdir(), "night-merge-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
   const bin = join(dir, "bin");
   mkdirSync(bin);
   writeFileSync(join(bin, "gh"), GH_STUB);
@@ -133,14 +135,15 @@ test("every closing keyword of the body is honoured", (t) => {
     ...env,
     ...MERGED,
     PR_BODY:
-      "fixes #63\nCloses #64\nresolved #65\nmentions #66 without a keyword\n",
+      "fixes #63\nCloses #64, #65\nresolved #66 and #67\n" +
+      "mentions #68, postfix #69 and prefix #70 stay out\n",
   });
   assert.equal(res.status, 0, `night-merge.sh failed: ${res.stderr}`);
   const closed = calls()
     .filter((c) => c.startsWith("issue close"))
     .map((c) => c.split(" ")[2])
     .sort();
-  assert.deepEqual(closed, ["63", "64", "65"]);
+  assert.deepEqual(closed, ["63", "64", "65", "66", "67"]);
 });
 
 test("a merged PR without issue links only deletes the branch", (t) => {
