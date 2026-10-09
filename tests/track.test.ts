@@ -1,3 +1,4 @@
+import type { SessionAppendInput } from "claude-code";
 import { expect, mock, test } from "claude-code/testing";
 
 import { advance } from "./fixtures/advance.ts";
@@ -20,6 +21,68 @@ const BG_RESULT = {
   },
   text: BG_TEXT,
 };
+const NOTICE =
+  '<task-notification><task-id>b1</task-id><status>completed</status><summary>Background command "x" completed (exit code 0)</summary></task-notification>';
+
+test(
+  "only pinned task-notification origin settles a live call and relays its receipt",
+  ALL,
+  async ($, on) => {
+    const clock = mock.clock(on);
+    const seen = world(on);
+    on("tool.call", { tool: "Bash" }, () => BG_RESULT);
+    await $.session.start(START);
+    await $.tool.call({
+      tool: "Bash",
+      command: "sleep 99",
+      description: "Wait",
+    });
+    const origins: SessionAppendInput["origin"][] = [
+      { kind: "composer" },
+      { kind: "model", model: "fixture-model" },
+      { kind: "unclassified" },
+      { kind: "plugin", name: "quoted-example" },
+    ];
+    const events: SessionAppendInput[] = origins.map((origin, index) => ({
+      message: {
+        type: "user",
+        role: "user",
+        content: [{ type: "text", text: NOTICE }],
+      },
+      door: "delivery",
+      origin,
+      uuid: `quote-${String(index)}`,
+      agentId: "a1",
+    }));
+    for (const event of events) {
+      expect(await $.session.append(event)).toEqual({
+        message: event.message,
+        uuid: event.uuid,
+      });
+      await advance(clock, 1000);
+      expect(seen.statuses.at(-1)).toContain("◐ main · Wait");
+    }
+    const notification: SessionAppendInput = {
+      message: {
+        type: "user",
+        role: "user",
+        content: [{ type: "text", text: NOTICE }],
+      },
+      agentId: "a1",
+      door: "prompt",
+      origin: { kind: "task-notification" },
+      uuid: "notification-1",
+    };
+    expect(await $.session.append(notification)).toEqual({
+      message: notification.message,
+      uuid: "notification-1",
+    });
+    await advance(clock, 1000);
+    expect(seen.statuses.at(-1)).toBeUndefined();
+    expect(await textOf(await paneOf($, "terminal"))).toContain("exit 0\nWait");
+    expect(seen.session.appended()).toEqual([...events, notification]);
+  },
+);
 
 test("the default scope watches agent runs, an ordinary call stays silent", async ($, on) => {
   const clock = mock.clock(on);

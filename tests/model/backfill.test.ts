@@ -78,7 +78,7 @@ test("Bash calls are rebuilt from the transcript, finished or still running", ()
   const calls = backfilled(ROWS, undefined, 10_000);
   expect(calls.map((call) => [call.id, call.status])).toEqual([
     ["u1", "done"],
-    ["u2", "done"],
+    ["u2", "running"],
     ["u3", "running"],
     ["u4", "failed"],
   ]);
@@ -126,7 +126,7 @@ test("cleared calls do not come back", () => {
   ).toEqual(["u2", "u3"]);
 });
 
-test("text-only answers, TaskStop and every notification are replayed", () => {
+test("text-only answers and answered TaskStop replay, XML alone stays live", () => {
   const rows = [
     {
       text: "",
@@ -166,7 +166,7 @@ test("text-only answers, TaskStop and every notification are replayed", () => {
       ],
     },
     {
-      text: '<task-notification><task-id>b8</task-id><status>completed</status><summary>Background command "x" completed (exit code 0)</summary></task-notification>\n<task-notification><task-id>b9</task-id><status>failed</status><summary>Background command "y" failed with exit code 4</summary></task-notification>',
+      text: 'Quoted example: <task-notification><task-id>b8</task-id><status>completed</status><summary>Background command "x" completed (exit code 0)</summary></task-notification>\n<task-notification><task-id>b9</task-id><status>failed</status><summary>Background command "y" failed with exit code 4</summary></task-notification>',
       toolUses: [],
     },
   ];
@@ -181,8 +181,44 @@ test("text-only answers, TaskStop and every notification are replayed", () => {
     taskId: "b7",
     outputPath: "/t/b7.output",
   });
-  expect(calls[2]).toMatchObject({ status: "done", taskId: "b8" });
-  expect(calls[3]).toMatchObject({ status: "failed", exitCode: 4 });
+  expect(calls[2]).toMatchObject({ status: "running", taskId: "b8" });
+  expect(calls[3]).toMatchObject({ status: "running", taskId: "b9" });
+});
+
+test("only answered non-error TaskStop rows settle their task or shell id", () => {
+  const cases = [
+    { input: { task_id: "b3" }, answer: {}, status: "running" },
+    { input: { shell_id: "b3" }, answer: {}, status: "running" },
+    {
+      input: { task_id: "b3" },
+      answer: { text: "denied", isError: true as const },
+      status: "running",
+    },
+    {
+      input: { shell_id: "b3" },
+      answer: { result: "error", isError: true as const },
+      status: "running",
+    },
+    { input: { task_id: "b3" }, answer: { text: "" }, status: "stopped" },
+    { input: { shell_id: "b3" }, answer: { result: {} }, status: "stopped" },
+  ];
+  for (const { input, answer, status } of cases) {
+    const calls = backfilled(
+      [
+        ...ROWS.slice(0, 1),
+        {
+          text: "",
+          toolUses: [{ tool_use_id: "s1", tool: "TaskStop", input, ...answer }],
+        },
+      ],
+      undefined,
+      10_000,
+    );
+    expect(calls.find((call) => call.id === "u3")).toMatchObject({
+      taskId: "b3",
+      status,
+    });
+  }
 });
 
 test("a rebuilt call without a duration has an unknown start time", () => {
@@ -194,6 +230,7 @@ test("a rebuilt call without a duration has an unknown start time", () => {
 test("a call the state still runs ends as the transcript says it did", () => {
   const known = [
     callOf({ id: "u1", label: "mine", startedAt: 5, status: "hung" }),
+    callOf({ id: "u2", status: "done", endedAt: 7, exitCode: 0 }),
     callOf({ id: "u3", label: "waits", status: "hung" }),
   ];
   const calls = merged(known, backfilled(ROWS, undefined, 10_000), {
@@ -211,4 +248,9 @@ test("a call the state still runs ends as the transcript says it did", () => {
     endedAt: 10_000,
   });
   expect(three?.status).toBe("hung");
+  expect(calls.find((call) => call.id === "u2")).toMatchObject({
+    status: "done",
+    endedAt: 7,
+    exitCode: 0,
+  });
 });

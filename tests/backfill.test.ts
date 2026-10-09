@@ -37,7 +37,16 @@ const MAIN = [
   {
     role: "assistant",
     text: "",
-    toolUses: [bg("u1", "b1", "E2E"), bg("u2", "b2", "Wait")],
+    toolUses: [
+      bg("u1", "b1", "E2E"),
+      bg("u2", "b2", "Wait"),
+      {
+        tool_use_id: "s1",
+        tool: "TaskStop",
+        input: { task_id: "b1" },
+        text: "stopped",
+      },
+    ],
   },
   {
     role: "user",
@@ -92,7 +101,7 @@ test(
     await $.session.start(START);
     const pane = await paneOf($, "terminal");
     const text = await textOf(pane);
-    expect(text).toContain("— exit 0\nE2E");
+    expect(text).toContain("— stopped\nE2E");
     expect(text).toContain("— no output\nWait");
     expect(text).toContain("— DONE 0\npi · list mods");
     expect(text).toContain("pi-runner: List mods");
@@ -166,9 +175,16 @@ test(
     seen.transcripts.set("a3", [
       grep,
       {
-        role: "user",
-        text: '<task-notification><task-id>b9</task-id><status>completed</status><summary>Background command "x" completed (exit code 0)</summary></task-notification>',
-        toolUses: [],
+        role: "assistant",
+        text: "",
+        toolUses: [
+          {
+            tool_use_id: "s9",
+            tool: "TaskStop",
+            input: { shell_id: "b9" },
+            text: "stopped",
+          },
+        ],
       },
     ]);
     await advance(clock, 40_000);

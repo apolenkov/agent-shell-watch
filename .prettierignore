@@ -7,3 +7,6 @@ package-lock.json
 .release-please-manifest.json
 CHANGELOG.md
 .claude-plugin/plugin.json
+
+# Unmodified upstream release bytes; vendor:check verifies their provenance.
+vendor/unbash/

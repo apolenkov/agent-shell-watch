@@ -1,5 +1,5 @@
 # Records demo/demo.gif: `vhs demo/demo.tape` from the repository root.
-# Needs Claude Code 2.1.287+ and a login. Loads the mod from this checkout
+# Needs Claude Code 2.1.295+ and a login. Loads the mod from this checkout
 # (--plugin-dir), so the recording shows the code in the repository.
 # demo/setup.sh builds the sandbox: an empty project at /tmp/my-app and a
 # throwaway HOME at /tmp/my-app-home with synthetic runner limits; the stand-ins

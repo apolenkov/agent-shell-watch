@@ -19,7 +19,7 @@ import {
 const SOURCE = ["hooks/**/*.{ts,tsx}"];
 const MODEL = ["hooks/model/**/*.ts"];
 const TESTS = ["tests/**/*.{ts,tsx}"];
-const TOOLS = ["*.config.ts", "eslint/**/*.ts"];
+const TOOLS = ["*.config.ts", "eslint/**/*.ts", "scripts/vendor-unbash.ts"];
 
 /** Size and complexity budgets; the suppression guard refuses disabling them. */
 const BUDGET = {
@@ -45,6 +45,8 @@ const eslintConfig: Linter.Config[] = defineConfig(
     "node_modules/**",
     "coverage/**",
     "engine-types/**",
+    // Unmodified upstream release bytes, verified by vendor:check.
+    "vendor/unbash/dist/**",
     ".claude-plugin/types/**",
     // Written by the night-fix bot: reproductions are kept as evidence and run
     // by node --test or the plugin runner, they do not meet the repo lint bar.

@@ -3,20 +3,14 @@
  * lines of its output, and the engine's background-task notifications.
  */
 import type { ShellRunner } from "../../types";
+import { shellOf } from "./shell.ts";
 
 const LABEL_MAX = 60;
 
 const OUTPUT_PATH = /Output is being written to: (\S+)/u;
-const RUNNERS: ReadonlySet<string> = new Set(["codex", "pi", "devin", "ocr"]);
-const SEGMENT = /[;&|()]|\s--\s/u;
 const ASSIGNMENT = /^\w+=/u;
-const SHELL_C = /(?:^|\s)(?:ba|z)?sh\s+-l?c\s+['"]?/gu;
-const TEE = /\|\s*tee\s+(?:-a\s+)?(?:'([^']+)'|"([^"]+)"|([^\s;&|<>'"]+))/u;
-const PROMPT = /(?:\s-p|\sexec)\s+(?:'([^']*)'|"([^"]*)"|([^\s;&|<>'"]+))/u;
 const PROMPT_WORDS = 6;
-const REDIRECT = /(?:^|\s)1?>>?\s*(?:'([^']+)'|"([^"]+)"|([^\s;&|<>'"]+))/u;
 const LINE_MAX = 200;
-const WATCH_FILE = /--watch-file(?:=|\s+)(?:'([^']*)'|"([^"]*)"|(\S+))/u;
 const VERDICT =
   /^(?:DONE \d+|RATE_LIMIT \d+|STALLED \S+|BUSY \d+ \S+|WAITING \S.*|FAILED \S.*)$/u;
 const EXIT_CODE = /^Exit code (\d+)/u;
@@ -55,48 +49,22 @@ export const outputPathOf = (text: string): string | undefined =>
   OUTPUT_PATH.exec(text)?.[1]?.replace(/\.$/u, "");
 
 /**
- * The external agent CLI a command segment runs as its executable: the
- * first word past `NAME=value` assignments, after `;`, `&&`, `|`, a guard's
- * ` -- `, or inside a `bash -c '…'` / `sh -c "…"` wrapper.
+ * The first supported executable runner, including a literal shell script
+ * or a recognized guard's child argv. Quoted argument data stays data.
  * @param command the Bash command
  * @returns the runner, or undefined
  */
 export const runnerOf = (command: string): ShellRunner | undefined =>
-  command
-    .replaceAll(SHELL_C, " ; ")
-    .split(SEGMENT)
-    .map(
-      (part) =>
-        part
-          .trim()
-          .split(/\s+/u)
-          .find((word) => !ASSIGNMENT.test(word))
-          ?.split("/")
-          .at(-1) ?? "",
-    )
-    .find((name) => RUNNERS.has(name)) as ShellRunner | undefined;
-
-const absoluteOf = (
-  pattern: Readonly<RegExp>,
-  command: string,
-): string | undefined => {
-  const found = pattern.exec(command);
-  const target = found?.[1] ?? found?.[2] ?? found?.[3];
-  return target?.startsWith("/") === true ? target : undefined;
-};
+  shellOf(command).runner;
 
 /**
- * The file whose growth is a runner's output: the guard's `--watch-file`, a
- * runner's `| tee [-a] /path`, or its absolute stdout redirect (`> /path`).
- * @param command the Bash command, as the model wrote it or as wrapped
- * @returns the path, or undefined
+ * The selected runner's absolute stdout/tee file, or a recognized guard's
+ * explicit watch path (which may be relative).
+ * @param command the Bash command
+ * @returns the path, or undefined for unsupported or ambiguous routing
  */
-export const watchPathOf = (command: string): string | undefined => {
-  const found = WATCH_FILE.exec(command);
-  const flagged = found?.[1] ?? found?.[2] ?? found?.[3];
-  const piped = absoluteOf(TEE, command) ?? absoluteOf(REDIRECT, command);
-  return flagged ?? (runnerOf(command) === undefined ? undefined : piped);
-};
+export const watchPathOf = (command: string): string | undefined =>
+  shellOf(command).watchPath;
 
 /**
  * A runner's prompt in its first words (`pi -p '…'`, `codex exec '…'`): its
@@ -105,8 +73,7 @@ export const watchPathOf = (command: string): string | undefined => {
  * @returns up to six words, `…` when cut, or undefined without a prompt
  */
 export const promptWordsOf = (command: string): string | undefined => {
-  const found = PROMPT.exec(command);
-  const words = (found?.[1] ?? found?.[2] ?? found?.[3] ?? "")
+  const words = (shellOf(command).prompt ?? "")
     .split(/\s+/u)
     .filter((word) => word !== "");
   const more = words.length > PROMPT_WORDS ? "…" : "";

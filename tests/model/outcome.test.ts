@@ -35,6 +35,9 @@ test("a deny, an error and an answered record become outcomes", () => {
     stdout: "",
     interrupted: false,
   });
+  expect(
+    outcomeOf({ result: { stdout: "" }, text: "work\nDONE 0" }),
+  ).toMatchObject({ stdout: "", text: "work\nDONE 0" });
 });
 
 test("an aborted Bash call is an interruption, not a failure", () => {
