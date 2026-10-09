@@ -7,5 +7,5 @@
     "eslint/suppression-guard.ts"
   ],
   "project": ["{hooks,tests}/**/*.{ts,tsx}", "eslint/**/*.ts", "*.config.ts"],
-  "ignoreDependencies": ["claude-code"]
+  "ignoreDependencies": ["claude-code", "unbash"]
 }

@@ -1,0 +1,131 @@
+{
+  "name": "unbash",
+  "version": "5.0.0",
+  "license": "ISC",
+  "source": "https://registry.npmjs.org/unbash/-/unbash-5.0.0.tgz",
+  "integrity": "sha512-RYNm/ISFtflWpIcXTPHHLJZ0mqzInav+L9ke9PcL+hHsSf9+Fd/syPb614Mlqs/O3AYgjnvxDOFl0a+zVqi1/w==",
+  "entry": "dist/parser.js",
+  "runtimeBytes": 244875,
+  "files": [
+    {
+      "path": "LICENSE",
+      "bytes": 738,
+      "sha256": "a8715bd6ba5604134c8bfea951ebc2379ae9e71e78262275f7f87a50c845ae96"
+    },
+    {
+      "path": "dist/ansi-c.d.ts",
+      "bytes": 151,
+      "sha256": "69e1cef09454682506ba60a4e917461af056ba95f7ad99c287976b4f9303d38e"
+    },
+    {
+      "path": "dist/ansi-c.js",
+      "bytes": 4421,
+      "sha256": "c4b82824f54190ea75654a9e07c01e4baa875085811f39c19bdc77192e718d47"
+    },
+    {
+      "path": "dist/arithmetic.d.ts",
+      "bytes": 728,
+      "sha256": "c8ebe480b26ec8029895f48a72fd94016cb8ac77d2a682b9a999a1259716ee4e"
+    },
+    {
+      "path": "dist/arithmetic.js",
+      "bytes": 17891,
+      "sha256": "eb1f46e5fe9ee4fb6f56e1b7ef0b677daf738d48f88322f92d0a79dabb1c50dc"
+    },
+    {
+      "path": "dist/assignment.d.ts",
+      "bytes": 521,
+      "sha256": "31f2012a0412e3ef534ef3d2430053963bb739c7873668d51415feb4a553deec"
+    },
+    {
+      "path": "dist/assignment.js",
+      "bytes": 4200,
+      "sha256": "b3cd8f1376461095103904fcdefb024d1ec4d2140fe53b72e179b10f0f7f01aa"
+    },
+    {
+      "path": "dist/chars.d.ts",
+      "bytes": 1458,
+      "sha256": "4cf2f743d73479e6365388ac99b8657c9b5fc38f18e35817a49b32c95c32f1a1"
+    },
+    {
+      "path": "dist/chars.js",
+      "bytes": 1130,
+      "sha256": "a7d1f62c9a196ceb548a1b46cc192cdcd25196704cab0b239f2b74616b765d7b"
+    },
+    {
+      "path": "dist/command.d.ts",
+      "bytes": 546,
+      "sha256": "d3d535a7f82870b6d781ba78d3f688cc5d7a30c66e746dd1e3a8b43b1f870ee6"
+    },
+    {
+      "path": "dist/command.js",
+      "bytes": 1224,
+      "sha256": "79063e3a47b6b1e6c67e0d923a4aac2ac0caae733a05dac339c476fb1960bef5"
+    },
+    {
+      "path": "dist/heredoc.d.ts",
+      "bytes": 599,
+      "sha256": "03c3b7dab3c91bb83e15382d0f9c0b41fa7148aa7da18606eb582ed75be89852"
+    },
+    {
+      "path": "dist/heredoc.js",
+      "bytes": 663,
+      "sha256": "3c4aa04930aac688fea396a85047679dc75963c520dce3730a75268395922a24"
+    },
+    {
+      "path": "dist/internal-types.d.ts",
+      "bytes": 5058,
+      "sha256": "a264149815c02fb7ec859ecde139e2eb924b5f5e54c80767d59373174f4d4bb2"
+    },
+    {
+      "path": "dist/lexer.d.ts",
+      "bytes": 7174,
+      "sha256": "5a632568be339e0602fcca24798f78695a64a2b6ec83568db7ef564b110ba1d9"
+    },
+    {
+      "path": "dist/lexer.js",
+      "bytes": 156501,
+      "sha256": "70288183c82dbf69ec9affcf578fabc08838302fd2b2cc192177855fcc58ee19"
+    },
+    {
+      "path": "dist/parser.d.ts",
+      "bytes": 308,
+      "sha256": "6ca259e501457007b34a532e8bcd3b94086553101ae283b1e0f22621abaa6ce1"
+    },
+    {
+      "path": "dist/parser.js",
+      "bytes": 52187,
+      "sha256": "0853cd478e97d3601a9fe82043ed9aadee6aaee786b13a578e1d7aa57bc5a94c"
+    },
+    {
+      "path": "dist/parts.d.ts",
+      "bytes": 1124,
+      "sha256": "0c2a0d361d42969fde2e8b9d17dc2fd3ff2b7d692ea9ee68a055c3d8c8ffc97b"
+    },
+    {
+      "path": "dist/parts.js",
+      "bytes": 3594,
+      "sha256": "18d993bff351709e527a3a0e986c4c6ab437dd7214c4ea0c07e94f8726eb3a8c"
+    },
+    {
+      "path": "dist/printer.d.ts",
+      "bytes": 97,
+      "sha256": "3539dc9d68b791073b024e9bff5da0644be2dee76b116d9e91df769af41df272"
+    },
+    {
+      "path": "dist/types.d.ts",
+      "bytes": 16330,
+      "sha256": "bca83b87783f6b98cb45dd507f9cd3bc7104e25ecfae7a770403955e813524de"
+    },
+    {
+      "path": "dist/word.d.ts",
+      "bytes": 727,
+      "sha256": "a65884359f4e24ca9364c51e9e092eeab0dfdb269e33af7c43291b17a283c2e6"
+    },
+    {
+      "path": "dist/word.js",
+      "bytes": 3064,
+      "sha256": "a16aa07a2abad48db8041a0a955c88b9d3f478d22956212f1e09702eb71815c2"
+    }
+  ]
+}

@@ -12,12 +12,14 @@
     "test": "claude plugin test . && sh scripts/test-night-fix.sh",
     "smoke:live": "sh scripts/live-smoke.sh",
     "eval": "claude plugin eval . --trust-plugin --allow-tools Bash --no-publish --ablation none --model haiku",
-    "check": "npm run format:check && npm run typecheck && npm run lint && npm run repo:lint && npm run validate && npm test",
+    "check": "npm run vendor:check && npm run format:check && npm run typecheck && npm run lint && npm run repo:lint && npm run validate && npm test",
     "update-types": "sh scripts/update-types.sh",
-    "prepare": "lefthook install"
+    "prepare": "lefthook install",
+    "vendor:sync": "node scripts/vendor-unbash.ts sync",
+    "vendor:check": "node scripts/vendor-unbash.ts check"
   },
   "devDependencies": {
-    "@anthropic-ai/claude-code": "2.1.289",
+    "@anthropic-ai/claude-code": "2.1.295",
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-conventional": "21.2.3",
     "@commitlint/types": "21.2.3",
@@ -28,22 +30,25 @@
     "eslint": "10.12.0",
     "eslint-plugin-functional": "10.0.1",
     "eslint-plugin-import-x": "4.17.1",
-    "eslint-plugin-jsdoc": "65.1.0",
+    "eslint-plugin-jsdoc": "65.2.1",
     "eslint-plugin-regexp": "3.3.1",
     "eslint-plugin-simple-import-sort": "14.0.0",
     "eslint-plugin-sonarjs": "4.2.2",
     "eslint-plugin-unicorn": "77.0.0",
     "eslint-plugin-unused-imports": "4.4.1",
-    "knip": "6.39.0",
-    "lefthook": "2.1.16",
+    "knip": "6.41.0",
+    "lefthook": "2.2.1",
     "prettier": "3.9.9",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.71.0"
+    "typescript-eslint": "8.71.1",
+    "unbash": "5.0.0"
   },
   "engines": {
-    "node": ">=26"
+    "node": ">=26",
+    "npm": ">=12.2.0"
   },
   "overrides": {
     "deepmerge-ts": "8.0.2"
-  }
+  },
+  "packageManager": "npm@12.2.0"
 }

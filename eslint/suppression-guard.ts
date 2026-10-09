@@ -12,6 +12,7 @@ const guardConfig: Linter.Config[] = defineConfig(
   globalIgnores([
     "node_modules/**",
     "engine-types/**",
+    "vendor/unbash/dist/**",
     ".claude-plugin/types/**",
   ]),
   {

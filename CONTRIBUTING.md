@@ -2,12 +2,14 @@
 
 ## Setup
 
+Use Node.js 26.11.1 and npm 12.2.0, matching the pinned development toolchain.
+
 ```sh
 npm ci            # installs tooling and the git hooks (lefthook)
 npm run check     # format, typecheck, lint, repo lint, validate, tests
 ```
 
-agent-shell-watch needs Claude Code 2.1.287+ (mods are on by default). Try it live with
+agent-shell-watch needs Claude Code 2.1.295+ (mods are on by default). Try it live with
 `claude --plugin-dir .` from the repository root.
 
 ## Rules of the house
@@ -47,7 +49,7 @@ local only (no tmux session with a login in CI).
 
 ## Dependency holds
 
-- `typescript` stays on 6.x (6.0.3): `typescript-eslint` 8.71.0, its latest,
+- `typescript` stays on 6.x (6.0.3): `typescript-eslint` 8.71.1, its latest,
   declares the peer `typescript >=4.8.4 <6.1.0`. Take TypeScript 7 once it widens
   that range; drop the Dependabot `ignore` for `typescript` then.
 

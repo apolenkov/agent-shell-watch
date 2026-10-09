@@ -125,7 +125,7 @@ export const onToolCall = async (
 };
 
 /**
- * `session.append`: a `<task-notification>` row settles its background call.
+ * `session.append`: a pinned task-notification settles its background call.
  * @param $ the engine
  * @param e the row
  * @param next the rest of the chain
@@ -136,6 +136,9 @@ export const onAppend = async (
   e: Readonly<SessionAppendInput>,
   next: Next<"session.append">,
 ): Promise<SessionAppendResult> => {
+  if (e.origin.kind !== "task-notification") {
+    return next(e);
+  }
   const notices = noticesOf(
     e.message.content
       .filter((block) => block.type === "text")

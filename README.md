@@ -14,7 +14,7 @@ and repeatable.</sub>
 [![codeql](https://github.com/apolenkov/agent-shell-watch/actions/workflows/codeql.yml/badge.svg)](https://github.com/apolenkov/agent-shell-watch/actions/workflows/codeql.yml)
 [![release](https://img.shields.io/github/v/release/apolenkov/agent-shell-watch?sort=semver)](https://github.com/apolenkov/agent-shell-watch/releases)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Claude Code ≥ 2.1.287](https://img.shields.io/badge/Claude%20Code-%E2%89%A5%202.1.287-0A7468)](https://claude.com/claude-code)
+[![Claude Code ≥ 2.1.295](https://img.shields.io/badge/Claude%20Code-%E2%89%A5%202.1.295-0A7468)](https://claude.com/claude-code)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/apolenkov/agent-shell-watch/badge)](https://scorecard.dev/viewer/?uri=github.com/apolenkov/agent-shell-watch)
 
 A [Claude Code](https://claude.com/claude-code) mod that watches the agent
@@ -65,7 +65,7 @@ It is also listed, with its sibling mods, in the
 /plugin install agent-shell-watch@agent-mods
 ```
 
-Requirements: Claude Code 2.1.287 or later (mods are on by default), and
+Requirements: Claude Code 2.1.295 or later (mods are on by default), and
 `tail` on `PATH`.
 
 ## Usage
@@ -159,14 +159,18 @@ live, at most every 30 s; the status line adds `⏳ codex limit` while a block
 is active.
 
 After `← main` a row says what the run spent (`← main · 23k tok · $0.002`). The
-numbers come from the run's own session file, found by the start time in its
+numbers come from a session file matched by the start time in its
 name (the call's cwd is unknown): Pi sums `message.usage` over the last 256 KiB
 of `~/.pi/agent/sessions` (tokens and dollars; `≥` when the file is larger),
 Codex shows `total_tokens` of the last `token_count` in `~/.codex/sessions`
-(cached input included, no cost). Devin keeps no usage, and a run whose file is
-not the only Pi one started in its window (parallel runners) is `—` too; with several Codex rollouts in the window the one started nearest to the call is taken. They are
-read only while the runners view is open, for the rows shown, at most every
-30 s per run; a narrow pane drops them before it cuts `by`.
+(cached input included, no cost). Devin and `ocr` keep no usage. Pi requires a
+single session in its start-time window; Codex chooses the nearest start, which
+can be a neighbouring run. With no known values the cell is `—`; a later read
+that finds nothing or has ambiguous attribution keeps the previous numbers.
+Files are read only while the runners view is open, at most every 30 s per run.
+The reader selects runs that fit the tallest 30-row pane; a smaller pane or an
+expanded row can hide some selected runs. A narrow pane drops usage cells
+before it cuts `by`.
 
 ### Glyphs
 
@@ -205,7 +209,7 @@ Set in `/config`.
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `session.start`           | Registers `/shell-watch`, rebuilds calls made before the mod loaded, starts the tick and poll                                                                                     |
 | `tool.call` (Bash)        | Records the call (label from the input `description`; under `scope: runners` only an agent run — a runner or a `--watch-file` call — is kept), awaits it, records exit and output |
-| `session.append`          | A `<task-notification>` row settles its background call (status, exit code)                                                                                                       |
+| `session.append`          | A row with SDK-pinned `task-notification` origin settles its background call (status, exit code)                                                                                  |
 | tick, every 1 s           | Advances elapsed time and redraws the status line                                                                                                                                 |
 | poll, every 2 s           | `fs.stat` of the watch or output file → freshness, quiet, hung; `tail -n 40` for runner rows                                                                                      |
 | `ui.render` (Pane)        | Draws the pane; the selected row's tail is read once when it is selected                                                                                                          |
@@ -219,18 +223,29 @@ after a guard's `--`, or inside `bash -c '…'` / `sh -c "…"`) is `codex`,
 no description its label is the first words of its prompt. The verdict is
 read from the Bash output once the run ends. agent-shell-watch sees the
 command as the model wrote it, before a `PreToolUse` settings hook wraps it,
-and recognises both forms. A `TaskStop` (the model's or the pane's) settles
-its call as stopped; an interrupted call is stopped, not failed. Every hook
+and recognises both forms. An answered, non-error `TaskStop` (the model's or
+the pane's) settles its call as stopped; an interrupted call is stopped, not failed. Every hook
 passes its event on unchanged.
 
 </details>
 
 ## Privacy
 
-No network, no telemetry. It reads only this session's transcript and the
-output and watch files of its own Bash calls, keeps its list in the session's
-memory, and stores one value across sessions: whether the pane was left open.
-See [SECURITY.md](SECURITY.md).
+The runtime plugin makes no network calls and collects no telemetry. It reads
+this session's transcript and the output/watch files of watched Bash calls.
+Limits and usage also read `~/.local/state/executor-limits/<name>`, recent global
+Codex rollouts under `~/.codex/sessions`, and selected Pi sessions discovered
+under `~/.pi/agent/sessions`. Selected tails are bounded to 65,536 bytes for
+Codex and 262,144 bytes for Pi; these files can belong to other workspaces.
+Usage attribution is based on start time because a call's cwd is unknown;
+parallel runs can leave it unknown or associate a nearby Codex session.
+
+Limits refresh only while the runners view is open or a runner is live. Usage
+refreshes while that view is open, at most every 30 s per run, for runs selected
+to fit the maximum 30-row pane; some may be hidden at the current height.
+The call list stays in session memory. Two preferences persist across sessions:
+`paneOpen` and `view`. Repository CI and factory workflows are separate from
+the runtime plugin. See [SECURITY.md](SECURITY.md) for the access details.
 
 ## Development
 

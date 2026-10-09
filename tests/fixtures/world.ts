@@ -1,8 +1,10 @@
 import type { AgentInfo, FsEntry, On, SessionMessage } from "claude-code";
-import { mock } from "claude-code/testing";
+import { mock, type MockSession } from "claude-code/testing";
 
 /** What the mocked world beneath the plugin saw and holds. */
 export interface World {
+  /** Native test-kit storage for append transport and its downstream receipt. */
+  readonly session: MockSession;
   readonly statuses: (string | undefined)[];
   readonly files: Map<string, { size: number; mtimeMs: number }>;
   readonly tails: Map<string, string>;
@@ -47,6 +49,7 @@ export const world = (
   agents: AgentInfo[] = [],
 ): World => {
   const seen: World = {
+    session: mock.session(on),
     statuses: [],
     files: new Map(),
     tails: new Map(),

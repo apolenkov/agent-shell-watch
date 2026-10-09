@@ -44,6 +44,27 @@ test("runner is the executable, not a word in an argument", () => {
   expect(runnerOf("grep pi notes.txt")).toBeUndefined();
   expect(runnerOf("git commit -m 'codex'")).toBeUndefined();
   expect(runnerOf("git log")).toBeUndefined();
+  expect(
+    [
+      "echo 'example; codex exec task'",
+      "printf '%s' 'text && pi -p go'",
+      "echo 'x | ocr review'",
+      "printf '%s' -- codex",
+      "echo -- pi",
+      "'FOO=1' codex exec go",
+      "1FOO=1 codex exec go",
+      "codex exec 'broken",
+      "f(){ codex exec go; }; f",
+      "$RUNNER exec go",
+      'echo "$(codex exec go)"',
+      "(codex exec go)",
+    ].map((command) => runnerOf(command)),
+  ).toEqual(Array.from({ length: 12 }));
+  expect(
+    ["FOO=1 BAR='x y' codex exec go", "'codex' exec go", 'co"dex" exec go'].map(
+      (command) => runnerOf(command),
+    ),
+  ).toEqual(["codex", "codex", "codex"]);
 });
 
 test("watch file is read from either spelling", () => {
@@ -54,6 +75,31 @@ test("watch file is read from either spelling", () => {
   expect(watchPathOf("pi -p x >> '/t/p q.log'")).toBe("/t/p q.log");
   expect(watchPathOf("pi -p x > rel.log")).toBeUndefined();
   expect(watchPathOf("ls > /t/list.txt")).toBeUndefined();
+  expect(watchPathOf("w --watch-file /t/a.log")).toBe("/t/a.log");
+  expect(
+    watchPathOf("node guard.ts --watch-file rel.log -- ./new-agent run"),
+  ).toBe("rel.log");
+  expect(watchPathOf("agent-runner-guard --watch-file=/t/a.log -- pi")).toBe(
+    "/t/a.log",
+  );
+  expect(watchPathOf("pi -p x 1>> /t/out 2>&1")).toBe("/t/out");
+  expect(
+    [
+      "printf '%s' '--watch-file /audit/example.log'",
+      "printf '%s' '--watch-file=/audit/example.log'",
+      "codex exec '--watch-file=/audit/example.log'",
+      "w '--watch-file /audit/example.log'",
+      "w -- pi -p '--watch-file=/audit/example.log'",
+      "pi -p x 2> /t/err",
+      "pi -p x < /t/in",
+      "pi -p x; ls > /t/list",
+      "ls > /t/list; pi -p x",
+      "pi -p x > /t/one > /t/two",
+      "pi -p x > /t/one 1>&2",
+      'pi -p x > "$HOME/out"',
+    ].map((command) => watchPathOf(command)),
+  ).toEqual(Array.from({ length: 12 }));
+  expect(watchPathOf("w '--watch-file' '/t/a b.log'")).toBe("/t/a b.log");
 });
 
 test("verdict is the last non-empty line when it is a guard line", () => {
@@ -130,6 +176,11 @@ test("a runner is found inside a shell wrapper, the guard's included", () => {
   expect(runnerOf('sh -c "devin -p go"')).toBe("devin");
   expect(runnerOf("bash -lc 'ocr review'")).toBe("ocr");
   expect(runnerOf("bash -c 'echo pi'")).toBeUndefined();
+  expect(runnerOf("bash -euc 'pi -p go'")).toBe("pi");
+  expect(runnerOf("bash -cl 'ocr review' argv0 codex")).toBe("ocr");
+  expect(runnerOf("node w.ts -- codex exec 'a; pi -p nope'")).toBe("codex");
+  expect(runnerOf("echo \"bash -c 'codex exec go'\"")).toBeUndefined();
+  expect(runnerOf("bash -o pipefail -c 'pi -p go'")).toBeUndefined();
 });
 
 test("a runner's tee at the end of its pipeline is its watch file", () => {
@@ -143,6 +194,24 @@ test("a runner's tee at the end of its pipeline is its watch file", () => {
       "node w.ts --silence 600 -- bash -c 'pi -p go 2>&1 | tee /t/w.log'",
     ),
   ).toBe("/t/w.log");
+  expect(watchPathOf("pi -p x | tee /t/watch 2> /t/err")).toBe("/t/watch");
+  expect(watchPathOf("pi -p x > /t/own | cat | tee /t/out")).toBe("/t/own");
+  expect(
+    [
+      "codex exec 'explain | tee /audit/not-a-file'",
+      "pi -p 'explain > /audit/not-a-file'",
+      "pi -p x | tee /t/one /t/two",
+      "pi -p x > /t/one | tee /t/two",
+      "pi -p x | tee /t/one | tee /t/two",
+      "pi -p x | tee rel.log",
+      "pi -p x | cat > /t/other | tee /t/out",
+      "pi -p x | tee /t/watch < /t/unrelated",
+      "pi -p x | tee /t/watch 0<&3",
+      "pi -p x | tee /t/watch 0<&-",
+      "pi -p x | tee /t/watch <<< 'unrelated'",
+      "pi -p x | tee /t/watch <<'END'\nunrelated\nEND\n",
+    ].map((command) => watchPathOf(command)),
+  ).toEqual(Array.from({ length: 12 }));
 });
 
 test("a runner's prompt gives its first words", () => {
@@ -155,4 +224,15 @@ test("a runner's prompt gives its first words", () => {
   expect(promptWordsOf("codex exec 'review the diff'")).toBe("review the diff");
   expect(promptWordsOf("codex exec review")).toBe("review");
   expect(promptWordsOf("ls -la")).toBeUndefined();
+  expect(promptWordsOf("codex exec 'explain | tee /audit/not-a-file'")).toBe(
+    "explain | tee /audit/not-a-file",
+  );
+  expect(promptWordsOf("echo -p wrong; pi -p 'actual prompt'")).toBe(
+    "actual prompt",
+  );
+  expect(promptWordsOf("pi -p '$HOME'")).toBe("$HOME");
+  expect(promptWordsOf('pi -p "$HOME"')).toBeUndefined();
+  expect(runnerOf('pi -p "$HOME"')).toBe("pi");
+  expect(promptWordsOf("echo \"pi -p 'fix it'\"")).toBeUndefined();
+  expect(promptWordsOf("printf '%s' 'exec pretend'")).toBeUndefined();
 });

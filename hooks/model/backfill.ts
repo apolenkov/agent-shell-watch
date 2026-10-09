@@ -12,7 +12,7 @@ import {
   trimmed,
 } from "./calls.ts";
 import { outcomeOf } from "./outcome.ts";
-import { noticesOf, type TaskNotice } from "./parse.ts";
+import type { TaskNotice } from "./parse.ts";
 
 /** One tool use as `$.session.messages()` reports it. */
 export interface ToolUseRow {
@@ -37,7 +37,10 @@ const stringOf = (value: unknown): string | undefined =>
 // A TaskStop the model made ends its task without a <task-notification>.
 const stopsOf = (uses: readonly ToolUseRow[]): readonly TaskNotice[] =>
   uses
-    .filter((use) => use.tool === "TaskStop" && use.isError !== true)
+    .filter(
+      (use) =>
+        use.tool === "TaskStop" && isAnswered(use) && use.isError !== true,
+    )
     .map(
       (use) =>
         stringOf(use.input["task_id"]) ?? stringOf(use.input["shell_id"]),
@@ -66,7 +69,13 @@ const callOf = (
     use.isError === true
       ? { isError: true as const, result: use.result, text: use.text ?? "" }
       : { result: use.result, text: use.text ?? "" };
-  const rebuilt = settled(call, outcomeOf(answer), now);
+  const outcome = outcomeOf(answer);
+  // Headless history may blank bulk stdout while retaining model-facing text.
+  const replay =
+    outcome.stdout === "" && use.text !== undefined
+      ? { ...outcome, stdout: use.text }
+      : outcome;
+  const rebuilt = settled(call, replay, now);
   return use.durationMs === undefined
     ? { ...rebuilt, isTimeUnknown: true }
     : rebuilt;
@@ -74,7 +83,7 @@ const callOf = (
 
 /**
  * The answered Bash calls of one conversation, each settled from its result;
- * a background call stays running unless a task notification ended it. An
+ * a background call stays running unless an answered TaskStop ended it. An
  * unanswered foreground call is left out: nothing would ever settle it.
  * @param rows the conversation's messages
  * @param agentId the subagent's id, undefined for the main loop
@@ -90,11 +99,8 @@ export const backfilled = (
   const calls = uses
     .filter((use) => use.tool === "Bash" && isAnswered(use))
     .map((use) => callOf(use, agentId, now));
-  return noticed(
-    calls,
-    [...noticesOf(rows.map((row) => row.text)), ...stopsOf(uses)],
-    now,
-  );
+  // Message text has no authenticated origin on either supported replay form.
+  return noticed(calls, stopsOf(uses), now);
 };
 
 // The transcript knows how a call ended even when the mod missed the event:
